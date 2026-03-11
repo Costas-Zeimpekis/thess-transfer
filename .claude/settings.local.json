@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/costaszeimpekis/Desktop/Projects/**)",
+      "Bash(pnpm create:*)",
+      "Bash(1:*)",
+      "Bash(pnpm add:*)"
+    ]
+  }
+}

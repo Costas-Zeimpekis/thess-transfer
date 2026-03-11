@@ -54,7 +54,10 @@ All requests require `Authorization: Bearer <INTAKE_API_KEY>`.
 pnpm install
 cp .env.example .env.local
 pnpm db:migrate
+<<<<<<< HEAD
 pnpm db:seed
+=======
+>>>>>>> 573fbfe (feat: initial commit)
 pnpm dev
 ```
 
