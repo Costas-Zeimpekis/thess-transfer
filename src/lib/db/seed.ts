@@ -1,5 +1,5 @@
 import { db } from './index'
-import { providers, providerEmails, users } from './schema'
+import { drivers, providers, providerEmails, users, vehicles } from './schema'
 import bcrypt from 'bcryptjs'
 
 async function seed() {
@@ -81,6 +81,76 @@ async function seed() {
     .onConflictDoNothing()
 
   console.log('Done! Default credentials: admin / admin123 — change immediately.')
+
+  console.log('Seeding mock drivers...')
+  const mockDrivers = [
+    { fullName: 'Νίκος Παπαδόπουλος', phone: '6971234501', email: 'nikos.papadopoulos@email.com', idCard: 'ΑΒ123401', active: true },
+    { fullName: 'Γιάννης Αναστασίου', phone: '6971234502', email: 'giannis.anastassiou@email.com', idCard: 'ΑΒ123402', active: true },
+    { fullName: 'Κώστας Δημητρίου', phone: '6971234503', email: 'kostas.dimitriou@email.com', idCard: 'ΑΒ123403', active: true },
+    { fullName: 'Θανάσης Γεωργίου', phone: '6971234504', email: 'thanasis.georgiou@email.com', idCard: 'ΑΒ123404', active: true },
+    { fullName: 'Σπύρος Κωνσταντίνου', phone: '6971234505', email: 'spyros.konstantinou@email.com', idCard: 'ΑΒ123405', active: true },
+    { fullName: 'Βασίλης Αλεξίου', phone: '6971234506', email: 'vasilis.alexiou@email.com', idCard: 'ΑΒ123406', active: true },
+    { fullName: 'Παναγιώτης Νικολάου', phone: '6971234507', email: 'panagiotis.nikolaou@email.com', idCard: 'ΑΒ123407', active: true },
+    { fullName: 'Δημήτρης Σταματίου', phone: '6971234508', email: 'dimitris.stamatiou@email.com', idCard: 'ΑΒ123408', active: true },
+    { fullName: 'Ηλίας Ζαχαρόπουλος', phone: '6971234509', email: 'ilias.zacharopoulos@email.com', idCard: 'ΑΒ123409', active: true },
+    { fullName: 'Χρήστος Λαμπρόπουλος', phone: '6971234510', email: 'christos.lampropoulos@email.com', idCard: 'ΑΒ123410', active: true },
+    { fullName: 'Στέφανος Μαρκόπουλος', phone: '6971234511', email: 'stefanos.markopoulos@email.com', idCard: 'ΑΒ123411', active: true },
+    { fullName: 'Αντώνης Παππάς', phone: '6971234512', email: 'antonis.pappas@email.com', idCard: 'ΑΒ123412', active: true },
+    { fullName: 'Μιχάλης Σπηλιωτόπουλος', phone: '6971234513', email: 'michalis.spiliot@email.com', idCard: 'ΑΒ123413', active: true },
+    { fullName: 'Τάκης Βουλγαράκης', phone: '6971234514', email: 'takis.voulgarakis@email.com', idCard: 'ΑΒ123414', active: true },
+    { fullName: 'Λευτέρης Τσέλιος', phone: '6971234515', email: 'lefteris.tselios@email.com', idCard: 'ΑΒ123415', active: true },
+    { fullName: 'Γιώργης Μανώλης', phone: '6971234516', email: 'giorhis.manolis@email.com', idCard: 'ΑΒ123416', active: true },
+    { fullName: 'Πέτρος Χατζηδάκης', phone: '6971234517', email: 'petros.chatzidakis@email.com', idCard: 'ΑΒ123417', active: true },
+    { fullName: 'Σωτήρης Καραμάνης', phone: '6971234518', email: 'sotiris.karamanis@email.com', idCard: 'ΑΒ123418', active: true },
+    { fullName: 'Αλέξανδρος Βέργος', phone: '6971234519', email: 'alexandros.vergos@email.com', idCard: 'ΑΒ123419', active: true },
+    { fullName: 'Κυριάκος Θεοδωρίδης', phone: '6971234520', email: 'kyriakos.theodoridis@email.com', idCard: 'ΑΒ123420', active: true },
+    { fullName: 'Γρηγόρης Μπαλής', phone: '6971234521', email: 'grigoris.balis@email.com', idCard: 'ΑΒ123421', active: true },
+    { fullName: 'Νεκτάριος Κυριαζής', phone: '6971234522', email: 'nektarios.kyriazis@email.com', idCard: 'ΑΒ123422', active: false },
+    { fullName: 'Ορέστης Δελής', phone: '6971234523', email: 'orestis.delis@email.com', idCard: 'ΑΒ123423', active: false },
+    { fullName: 'Φώτης Αργυρόπουλος', phone: '6971234524', email: 'fotis.argyropoulos@email.com', idCard: 'ΑΒ123424', active: false },
+    { fullName: 'Ευάγγελος Σκουλάς', phone: '6971234525', email: 'evangelos.skoulas@email.com', idCard: 'ΑΒ123425', active: false },
+  ]
+
+  for (const d of mockDrivers) {
+    await db.insert(drivers).values(d).onConflictDoNothing()
+  }
+
+  console.log('Seeded 25 mock drivers.')
+
+  console.log('Seeding mock vehicles...')
+  const mockVehicles = [
+    { name: 'Mercedes E-Class 1', plate: 'ΘΚΚ-1001', type: 'car' as const, brand: 'Mercedes-Benz', active: true },
+    { name: 'Toyota Camry 2', plate: 'ΘΚΚ-1002', type: 'car' as const, brand: 'Toyota', active: true },
+    { name: 'BMW 5 Series 3', plate: 'ΘΚΚ-1003', type: 'car' as const, brand: 'BMW', active: true },
+    { name: 'Audi A6 4', plate: 'ΘΚΚ-1004', type: 'car' as const, brand: 'Audi', active: true },
+    { name: 'Volkswagen Passat 5', plate: 'ΘΚΚ-1005', type: 'car' as const, brand: 'Volkswagen', active: true },
+    { name: 'Skoda Superb 6', plate: 'ΘΚΚ-1006', type: 'car' as const, brand: 'Skoda', active: true },
+    { name: 'Hyundai Sonata 7', plate: 'ΘΚΚ-1007', type: 'car' as const, brand: 'Hyundai', active: true },
+    { name: 'Volvo S90 8', plate: 'ΘΚΚ-1008', type: 'car' as const, brand: 'Volvo', active: true },
+    { name: 'Ford Mondeo 9', plate: 'ΘΚΚ-1009', type: 'car' as const, brand: 'Ford', active: true },
+    { name: 'Peugeot 508 10', plate: 'ΘΚΚ-1010', type: 'car' as const, brand: 'Peugeot', active: true },
+    { name: 'Mercedes Vito 11', plate: 'ΘΚΚ-1011', type: 'van' as const, brand: 'Mercedes-Benz', active: true },
+    { name: 'Volkswagen Transporter 12', plate: 'ΘΚΚ-1012', type: 'van' as const, brand: 'Volkswagen', active: true },
+    { name: 'Ford Transit 13', plate: 'ΘΚΚ-1013', type: 'van' as const, brand: 'Ford', active: true },
+    { name: 'Renault Traffic 14', plate: 'ΘΚΚ-1014', type: 'van' as const, brand: 'Renault', active: true },
+    { name: 'Peugeot Expert 15', plate: 'ΘΚΚ-1015', type: 'van' as const, brand: 'Peugeot', active: true },
+    { name: 'Mercedes Viano 16', plate: 'ΘΚΚ-1016', type: 'van' as const, brand: 'Mercedes-Benz', active: true },
+    { name: 'Volkswagen Crafter 17', plate: 'ΘΚΚ-1017', type: 'van' as const, brand: 'Volkswagen', active: true },
+    { name: 'Iveco Daily 18', plate: 'ΘΚΚ-1018', type: 'van' as const, brand: 'Iveco', active: true },
+    { name: 'Mercedes Sprinter 19', plate: 'ΘΚΚ-1019', type: 'van' as const, brand: 'Mercedes-Benz', active: true },
+    { name: 'Toyota HiAce 20', plate: 'ΘΚΚ-1020', type: 'van' as const, brand: 'Toyota', active: true },
+    { name: 'Setra S 415 21', plate: 'ΘΚΚ-1021', type: 'bus' as const, brand: 'Setra', active: true },
+    { name: 'Mercedes Tourismo 22', plate: 'ΘΚΚ-1022', type: 'bus' as const, brand: 'Mercedes-Benz', active: true },
+    { name: 'Volvo 9700 23', plate: 'ΘΚΚ-1023', type: 'bus' as const, brand: 'Volvo', active: true },
+    { name: 'MAN Lion\'s Coach 24', plate: 'ΘΚΚ-1024', type: 'bus' as const, brand: 'MAN', active: false },
+    { name: 'Neoplan Cityliner 25', plate: 'ΘΚΚ-1025', type: 'bus' as const, brand: 'Neoplan', active: false },
+  ]
+
+  for (const v of mockVehicles) {
+    await db.insert(vehicles).values(v).onConflictDoNothing()
+  }
+
+  console.log('Seeded 25 mock vehicles.')
 }
 
 seed().catch(console.error)

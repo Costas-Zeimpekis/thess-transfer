@@ -884,7 +884,7 @@ export default function BookingForm({
 																</SelectContent>
 															</Select>
 														</div>
-														{/* <div className="space-y-2">
+														<div className="space-y-2">
 															<Label htmlFor="assignPartnerPrice">
 																Τιμή Ανάθεσης
 															</Label>
@@ -900,28 +900,11 @@ export default function BookingForm({
 																disabled={loading}
 																placeholder="0.00"
 															/>
-														</div> */}
+														</div>
 													</div>
 												)}
 
-												{hasAssignmentInForm && (
-													<div>
-														<Button
-															type="button"
-															variant="outline"
-															size="sm"
-															onClick={() => {
-																setAssignDriverId("");
-																setAssignVehicleId("");
-																setAssignPartnerId("");
-																setAssignPartnerPrice("");
-															}}
-															disabled={loading}
-														>
-															Αναίρεση Ανάθεσης
-														</Button>
-													</div>
-												)}
+											
 											</>
 										)}
 									</CardContent>
