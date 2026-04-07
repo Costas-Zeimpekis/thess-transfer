@@ -1,5 +1,5 @@
 import { db } from './index'
-import { drivers, providers, providerEmails, users, vehicles } from './schema'
+import { drivers, partners, providers, providerEmails, users, vehicles } from './schema'
 import bcrypt from 'bcryptjs'
 
 async function seed() {
@@ -151,6 +151,41 @@ async function seed() {
   }
 
   console.log('Seeded 25 mock vehicles.')
+
+  console.log('Seeding mock partners...')
+  const mockPartners = [
+    { name: 'Αεροδρόμιο Transfers A.E.', email: 'info@aerodromio-transfers.gr', phone: '2310100001', contactInfo: 'Κτήριο Α, Αερολ. Μακεδονία' },
+    { name: 'Θεσσαλονίκη Taxi Services', email: 'contact@thessaloniki-taxi.gr', phone: '2310100002', contactInfo: 'Λεωφ. Νίκης 22, Θεσσαλονίκη' },
+    { name: 'Βόρεια Ελλάδα Transfers', email: 'info@northgreece-transfers.gr', phone: '2310100003', contactInfo: null },
+    { name: 'Makedonia Travel', email: 'bookings@makedonia-travel.gr', phone: '2310100004', contactInfo: 'Εγνατία 45, Θεσσαλονίκη' },
+    { name: 'Olympos Transport', email: 'info@olympos-transport.gr', phone: '2310100005', contactInfo: null },
+    { name: 'Ήλιος Transfers', email: 'ilios@transfers.gr', phone: '6944100006', contactInfo: 'Βασ. Όλγας 10, Θεσσαλονίκη' },
+    { name: 'Balkan Transfers Ltd', email: 'ops@balkan-transfers.com', phone: '2310100007', contactInfo: null },
+    { name: 'Alpha Limousine Service', email: 'alpha@limousine.gr', phone: '2310100008', contactInfo: 'Τσιμισκή 80, Θεσσαλονίκη' },
+    { name: 'Κεντρική Μακεδονία Tourism', email: 'info@km-tourism.gr', phone: '2310100009', contactInfo: null },
+    { name: 'Hellenic Car Service', email: 'contact@hellenic-carservice.gr', phone: '6944100010', contactInfo: 'Μοναστηρίου 120, Θεσσαλονίκη' },
+    { name: 'Premium VIP Transfers', email: 'vip@premium-transfers.gr', phone: '2310100011', contactInfo: null },
+    { name: 'City Shuttle Thessaloniki', email: 'info@cityshuttle.gr', phone: '6944100012', contactInfo: 'Δ. Γούναρη 5, Θεσσαλονίκη' },
+    { name: 'Μεταφορές Αδελφοί Νικολάου', email: null, phone: '6944100013', contactInfo: 'Κ. Καρταλή 33, Βέροια' },
+    { name: 'Euro Transfer Solutions', email: 'info@eurotransfer.gr', phone: '2310100014', contactInfo: null },
+    { name: 'Ταξί Σύνδεσμος Θεσσαλονίκης', email: 'syndemos@taxithess.gr', phone: '2310100015', contactInfo: 'Αριστοτέλους 6, Θεσσαλονίκη' },
+    { name: 'North Star Travel Agency', email: 'info@northstar-travel.gr', phone: '6944100016', contactInfo: null },
+    { name: 'Royal Ground Transport', email: 'royal@groundtransport.gr', phone: '2310100017', contactInfo: 'Πλ. Αριστοτέλους 12, Θεσσαλονίκη' },
+    { name: 'Express Ride Hellas', email: 'express@ridehellas.gr', phone: '6944100018', contactInfo: null },
+    { name: 'Αξιός Transfers', email: 'axios@transfers.gr', phone: '2310100019', contactInfo: 'Παύλου Μελά 7, Θεσσαλονίκη' },
+    { name: 'Λευκός Πύργος Transports', email: 'info@lefkospyrgos-transport.gr', phone: '2310100020', contactInfo: null },
+    { name: 'Thermo Transfers', email: null, phone: '6944100021', contactInfo: 'Λαγκαδάς, Θεσσαλονίκη' },
+    { name: 'Ηρακλής Logistics', email: 'info@iraklis-logistics.gr', phone: '2310100022', contactInfo: null },
+    { name: 'Μετρό & Μεταφορές Α.Ε.', email: 'metro@metafores.gr', phone: '2310100023', contactInfo: 'Σινδός, Θεσσαλονίκη' },
+    { name: 'Sundrive Hellas', email: 'sundrive@hellas.gr', phone: '6944100024', contactInfo: null },
+    { name: 'Καλαμαριά Transfer Club', email: 'info@kalamaria-transfer.gr', phone: '2310100025', contactInfo: 'Κομνηνών 3, Καλαμαριά' },
+  ]
+
+  for (const p of mockPartners) {
+    await db.insert(partners).values(p).onConflictDoNothing()
+  }
+
+  console.log('Seeded 25 mock partners.')
 }
 
 seed().catch(console.error)
