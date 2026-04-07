@@ -1,3 +1,5 @@
+import Navigation from "@/components/ui/navigation";
+
 export default function SettingsPage() {
-  return <h1>Ρυθμίσεις</h1>
+	return <Navigation />;
 }

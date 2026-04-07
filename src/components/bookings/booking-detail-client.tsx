@@ -2,19 +2,18 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import BookingSheet, { type BookingFormData } from './booking-sheet'
-
-type Provider = { id: number; name: string }
+import { buttonVariants } from '@/components/ui/button'
+import type { BookingFormData } from './booking-sheet'
 
 type BookingDetailClientProps = {
   booking: BookingFormData
-  providers: Provider[]
+  providers?: { id: number; name: string }[]
 }
 
-export default function BookingDetailClient({ booking, providers }: BookingDetailClientProps) {
+export default function BookingDetailClient({ booking }: BookingDetailClientProps) {
   const router = useRouter()
-  const [sheetOpen, setSheetOpen] = useState(false)
   const [cancelling, setCancelling] = useState(false)
 
   const canCancel = booking.status !== 'completed' && booking.status !== 'cancelled'
@@ -35,30 +34,16 @@ export default function BookingDetailClient({ booking, providers }: BookingDetai
     }
   }
 
-  function handleSuccess() {
-    router.refresh()
-  }
-
   return (
-    <>
-      <div className="flex gap-2">
-        <Button variant="outline" onClick={() => setSheetOpen(true)}>
-          Επεξεργασία
+    <div className="flex gap-2">
+      <Link href={`/bookings/${booking.id}/edit`} className={buttonVariants({ variant: 'outline' })}>
+        Επεξεργασία
+      </Link>
+      {canCancel && (
+        <Button variant="destructive" onClick={handleCancel} disabled={cancelling}>
+          {cancelling ? 'Ακύρωση…' : 'Ακύρωση Κράτησης'}
         </Button>
-        {canCancel && (
-          <Button variant="destructive" onClick={handleCancel} disabled={cancelling}>
-            {cancelling ? 'Ακύρωση…' : 'Ακύρωση Κράτησης'}
-          </Button>
-        )}
-      </div>
-
-      <BookingSheet
-        open={sheetOpen}
-        onOpenChange={setSheetOpen}
-        booking={booking}
-        providers={providers}
-        onSuccess={handleSuccess}
-      />
-    </>
+      )}
+    </div>
   )
 }

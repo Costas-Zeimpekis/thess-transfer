@@ -1,3 +1,4 @@
+import Navigation from "@/components/ui/navigation";
 export default function MicroExpensesPage() {
-  return <h1>Μικροέξοδα</h1>
+	return <Navigation />;
 }

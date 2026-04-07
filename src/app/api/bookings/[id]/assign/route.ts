@@ -61,6 +61,16 @@ export async function POST(request: Request, context: RouteContext) {
       updatedAt: new Date(),
     }
     action = 'assigned_partner'
+  } else if (type === 'unassign') {
+    updateValues = {
+      driverId: null,
+      vehicleId: null,
+      partnerId: null,
+      partnerAssignmentPrice: null,
+      status: 'pending',
+      updatedAt: new Date(),
+    }
+    action = 'unassigned'
   } else {
     return NextResponse.json({ error: 'Μη έγκυρος τύπος ανάθεσης' }, { status: 400 })
   }

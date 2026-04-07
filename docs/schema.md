@@ -123,9 +123,10 @@ Action values: `created`, `updated`, `confirmed`, `cancelled`, `completed`,
 `assigned_driver`, `assigned_partner`, `unassigned`, `reverted_to_pending`
 
 ### `micro_expenses`
-Small operational expenses linked to a driver.
+Small operational expenses linked to a driver and optionally a booking.
 ```
-id, driver_id → drivers, reason, price, date, description,
+id, driver_id → drivers, booking_id → bookings (nullable, set null on delete),
+reason, price, date, description,
 custom_fields (jsonb), created_at, updated_at
 ```
 
