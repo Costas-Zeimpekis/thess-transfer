@@ -12,6 +12,7 @@ const PUBLIC_ROUTES = [
 function isPublicRoute(pathname: string): boolean {
   if (PUBLIC_ROUTES.includes(pathname)) return true
   if (pathname.startsWith('/api/intake/')) return true
+  if (pathname.startsWith('/api/agent/')) return true
   return false
 }
 
@@ -43,9 +44,6 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for static files and Next.js internals
-     */
-    '/((?!_next/static|_next/image|favicon.ico).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.[a-z]+$).*)',
   ],
 }

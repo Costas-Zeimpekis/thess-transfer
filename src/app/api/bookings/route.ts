@@ -29,6 +29,7 @@ export async function GET(request: Request) {
 	const from = searchParams.get("from");
 	const to = searchParams.get("to");
 	const search = searchParams.get("search");
+	const paymentMethod = searchParams.get("paymentMethod");
 
 	const conditions = [];
 
@@ -66,6 +67,14 @@ export async function GET(request: Request) {
 			or(
 				ilike(bookings.customerName, `%${search}%`),
 				ilike(bookings.providerBookingRef, `%${search}%`),
+			),
+		);
+	}
+	if (paymentMethod) {
+		conditions.push(
+			eq(
+				bookings.paymentMethod,
+				paymentMethod as "cash" | "paypal" | "credit_card" | "bank" | "paid",
 			),
 		);
 	}

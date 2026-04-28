@@ -27,13 +27,15 @@ export default async function NewBookingPage() {
 		]);
 
 	return (
-		<BookingForm
-			providers={allProviders}
-			drivers={allDrivers}
-			vehicles={allVehicles}
-			partners={allPartners}
-			history={[]}
-			microExpenses={[]}
-		/>
+		<div className="w-full">
+			<BookingForm
+				providers={allProviders}
+				drivers={allDrivers}
+				vehicles={allVehicles}
+				partners={allPartners}
+				history={[]}
+				microExpenses={[]}
+			/>
+		</div>
 	);
 }

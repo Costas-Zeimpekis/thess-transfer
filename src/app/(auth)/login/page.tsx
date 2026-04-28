@@ -64,6 +64,11 @@ export default function LoginPage() {
 							disabled={loading}
 							id="username"
 							onChange={(e) => setUsername(e.target.value)}
+							onKeyDown={(event) => {
+								if(event.key === 'Enter') {
+									handleSubmit(event)
+								}
+							}}
 							required
 							type="text"
 							value={username}
@@ -79,6 +84,12 @@ export default function LoginPage() {
 							disabled={loading}
 							id="password"
 							onChange={(e) => setPassword(e.target.value)}
+							onKeyDown={(e) => {
+									if (e.key === 'Enter') {
+										// We prevent the default browser behavior and manually trigger submit
+										handleSubmit(e); 
+									}
+								}}
 							required
 							type="password"
 							value={password}

@@ -230,8 +230,7 @@ export const bookingHistory = pgTable("booking_history", {
 export const microExpenses = pgTable("micro_expenses", {
 	id: serial("id").primaryKey(),
 	driverId: integer("driver_id")
-		.notNull()
-		.references(() => drivers.id, { onDelete: "restrict" }),
+		.references(() => drivers.id, { onDelete: "set null" }),
 	bookingId: integer("booking_id").references(() => bookings.id, {
 		onDelete: "set null",
 	}),

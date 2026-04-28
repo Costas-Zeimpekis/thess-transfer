@@ -32,6 +32,7 @@ Framework: Next.js 14 App Router. Styling: Tailwind CSS + shadcn/ui.
 **Filters (top bar):**
 - Date range (pickup_datetime)
 - Status (pending / confirmed / completed / cancelled)
+- Payment method (cash / paypal / credit_card / bank / paid)
 - Provider
 - Driver
 - Vehicle
@@ -48,6 +49,8 @@ Framework: Next.js 14 App Router. Styling: Tailwind CSS + shadcn/ui.
 - Vehicle type
 - Driver / Vehicle (or Partner name)
 - Status badge
+- Ημ/νία Κράτησης (createdAt — full datetime, sortable)
+- Payment method (Τρόπος Πληρωμής)
 - Real price
 - Declared price
 - Difference

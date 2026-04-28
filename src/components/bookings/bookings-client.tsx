@@ -1,6 +1,5 @@
 "use client";
 
-import { Eye } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -95,6 +94,14 @@ const VEHICLE_TYPE_LABELS: Record<string, string> = {
 	bus: "Λεωφορείο",
 };
 
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+	cash: "Μετρητά",
+	paypal: "PayPal",
+	credit_card: "Πιστωτική Κάρτα",
+	bank: "Τράπεζα",
+	paid: "Πληρωμένο",
+};
+
 function statusBadgeClass(status: string): string {
 	switch (status) {
 		case "pending":
@@ -154,6 +161,7 @@ export default function BookingsClient({
 	const [driverId, setDriverId] = useState("all");
 	const [vehicleId, setVehicleId] = useState("all");
 	const [partnerId, setPartnerId] = useState("all");
+	const [paymentMethod, setPaymentMethod] = useState("all");
 	const [search, setSearch] = useState("");
 	const [assignmentTab, setAssignmentTab] = useState<"driver" | "partner">(
 		"driver",
@@ -168,6 +176,7 @@ export default function BookingsClient({
 		driverId: "all",
 		vehicleId: "all",
 		partnerId: "all",
+		paymentMethod: "all",
 		search: "",
 	});
 
@@ -235,6 +244,10 @@ export default function BookingsClient({
 					aVal = a.status;
 					bVal = b.status;
 					break;
+				case "createdAt":
+					aVal = a.createdAt;
+					bVal = b.createdAt;
+					break;
 			}
 			if (aVal < bVal) return sortDir === "asc" ? -1 : 1;
 			if (aVal > bVal) return sortDir === "asc" ? 1 : -1;
@@ -261,6 +274,7 @@ export default function BookingsClient({
 			if (filters.driverId !== "all") params.set("driver", filters.driverId);
 			if (filters.vehicleId !== "all") params.set("vehicle", filters.vehicleId);
 			if (filters.partnerId !== "all") params.set("partner", filters.partnerId);
+		if (filters.paymentMethod !== "all") params.set("paymentMethod", filters.paymentMethod);
 			if (filters.from) params.set("from", filters.from);
 			if (filters.to) params.set("to", filters.to);
 			if (filters.search) params.set("search", filters.search);
@@ -290,6 +304,7 @@ export default function BookingsClient({
 			driverId,
 			vehicleId,
 			partnerId,
+			paymentMethod,
 			search,
 		});
 	}
@@ -304,6 +319,7 @@ export default function BookingsClient({
 		setDriverId("all");
 		setVehicleId("all");
 		setPartnerId("all");
+		setPaymentMethod("all");
 		setSearch("");
 		setAssignmentTab("driver");
 		setApplied({
@@ -315,6 +331,7 @@ export default function BookingsClient({
 			driverId: "all",
 			vehicleId: "all",
 			partnerId: "all",
+			paymentMethod: "all",
 			search: "",
 		});
 	}
@@ -367,6 +384,19 @@ export default function BookingsClient({
 													sortDir={sortDir}
 												/>
 											</div>
+										</div>
+									</TableHead>
+									<TableHead
+										className="font-extrabold cursor-pointer select-none"
+										onClick={() => handleSort("createdAt")}
+									>
+										<div className="flex items-center gap-1">
+											Ημ/νία Κράτησης
+											<SortIcon
+												col="createdAt"
+												sortCol={sortCol}
+												sortDir={sortDir}
+											/>
 										</div>
 									</TableHead>
 									<TableHead
@@ -474,6 +504,9 @@ export default function BookingsClient({
 											/>
 										</div>
 									</TableHead>
+									<TableHead className="font-extrabold">
+										Τρόπος Πληρωμής
+									</TableHead>
 									<TableHead className="text-right font-extrabold">
 										Πραγματική
 									</TableHead>
@@ -491,6 +524,9 @@ export default function BookingsClient({
 										<TableRow key={i}>
 											<TableCell>
 												<Skeleton className="h-4 w-8" />
+											</TableCell>
+											<TableCell>
+												<Skeleton className="h-4 w-32" />
 											</TableCell>
 											<TableCell>
 												<Skeleton className="h-4 w-24" />
@@ -515,6 +551,9 @@ export default function BookingsClient({
 											</TableCell>
 											<TableCell>
 												<Skeleton className="h-5 w-20 rounded-full" />
+											</TableCell>
+											<TableCell>
+												<Skeleton className="h-4 w-24" />
 											</TableCell>
 											<TableCell className="text-right">
 												<Skeleton className="h-4 w-14 ml-auto" />
@@ -562,6 +601,16 @@ export default function BookingsClient({
 												<TableCell className="font-mono text-sm">
 													{b.id}
 												</TableCell>
+												<TableCell className="whitespace-nowrap text-sm">
+													{new Date(b.createdAt).toLocaleString("el-GR", {
+														day: "2-digit",
+														month: "2-digit",
+														year: "numeric",
+														hour: "2-digit",
+														minute: "2-digit",
+														hour12: false,
+													})}
+												</TableCell>
 												<TableCell>{b.providerName}</TableCell>
 												<TableCell className="font-mono text-sm">
 													{b.providerBookingRef}
@@ -598,6 +647,11 @@ export default function BookingsClient({
 													>
 														{STATUS_LABELS[b.status] ?? b.status}
 													</Badge>
+												</TableCell>
+												<TableCell className="text-sm">
+													{b.paymentMethod
+														? (PAYMENT_METHOD_LABELS[b.paymentMethod] ?? b.paymentMethod)
+														: "—"}
 												</TableCell>
 												<TableCell className="text-right font-mono text-sm">
 													{fmt(b.realPrice)}
@@ -721,6 +775,32 @@ export default function BookingsClient({
 									<SelectItem value="confirmed">Επιβεβαιωμένες</SelectItem>
 									<SelectItem value="completed">Ολοκληρωμένες</SelectItem>
 									<SelectItem value="cancelled">Ακυρωμένες</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
+
+						<div className="space-y-1">
+							<Label className="text-xs">Τρόπος Πληρωμής</Label>
+							<Select
+								value={paymentMethod}
+								onValueChange={(v) => setPaymentMethod(v ?? "all")}
+							>
+								<SelectTrigger className="h-8 w-full bg-white text-[#333333]">
+									<SelectValue>
+										{(v: string | null) =>
+											v === "all"
+												? "Όλοι"
+												: ((PAYMENT_METHOD_LABELS as Record<string, string>)[v ?? ""] ?? v)
+										}
+									</SelectValue>
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="all">Όλοι</SelectItem>
+									<SelectItem value="cash">Μετρητά</SelectItem>
+									<SelectItem value="paypal">PayPal</SelectItem>
+									<SelectItem value="credit_card">Πιστωτική Κάρτα</SelectItem>
+									<SelectItem value="bank">Τράπεζα</SelectItem>
+									<SelectItem value="paid">Πληρωμένο</SelectItem>
 								</SelectContent>
 							</Select>
 						</div>

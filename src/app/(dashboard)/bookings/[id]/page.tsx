@@ -46,6 +46,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
 			vehicleId: bookings.vehicleId,
 			partnerId: bookings.partnerId,
 			partnerAssignmentPrice: bookings.partnerAssignmentPrice,
+			createdAt: bookings.createdAt,
 		})
 		.from(bookings)
 		.leftJoin(providers, eq(bookings.providerId, providers.id))
@@ -94,6 +95,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
 				price: microExpenses.price,
 				date: microExpenses.date,
 				description: microExpenses.description,
+				driverId: microExpenses.driverId,
 				driverName: drivers.fullName,
 			})
 			.from(microExpenses)
@@ -129,6 +131,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
 					vehicleId: booking.vehicleId,
 					partnerId: booking.partnerId,
 					partnerAssignmentPrice: booking.partnerAssignmentPrice,
+					createdAt: booking.createdAt?.toISOString() ?? null,
 				}}
 				providers={allProviders}
 				drivers={allDrivers}

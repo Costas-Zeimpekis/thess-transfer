@@ -229,8 +229,6 @@ export async function PUT(request: Request, context: RouteContext) {
 			resolvedPartnerId != null;
 		if (hasAssignment && current.status === "pending") {
 			trackChange("status", "confirmed");
-		} else if (!hasAssignment && current.status === "confirmed") {
-			trackChange("status", "pending");
 		}
 	}
 

@@ -6,7 +6,7 @@
 [Intake API CREATE]  ──────────────────────────────────► pending
 [Manual CREATE]      ──────────────────────────────────► pending
 
-pending ──► [admin assigns driver+vehicle OR partner] ──► confirmed
+pending ──► [admin confirms manually OR assigns driver+vehicle OR partner] ──► confirmed
 confirmed ──► [pickup_datetime passes — auto cron]    ──► completed
 confirmed ──► [intake API UPDATE before pickup time]  ──► pending  (assignment cleared)
 any non-completed ──► [intake API CANCEL or manual]   ──► cancelled
@@ -24,17 +24,21 @@ any non-completed ──► [intake API CANCEL or manual]   ──► cancelled
 ### Assign to driver + vehicle
 - Set `driver_id` and `vehicle_id`
 - Clear `partner_id` and `partner_assignment_price`
-- Status: pending → confirmed
+- Status: pending → confirmed (auto)
 
 ### Assign to partner
 - Set `partner_id` and `partner_assignment_price`
 - Clear `driver_id` and `vehicle_id`
-- Status: pending → confirmed
+- Status: pending → confirmed (auto)
 - The booking will NOT appear in driver or vehicle filtered lists
 
 ### Reassignment
 - Can switch from partner → driver+vehicle and vice versa at any time (while not completed)
-- Reversing partner assignment restores driver/vehicle fields to nullable (admin must re-assign)
+- Clearing an assignment from a confirmed booking does NOT revert status to pending
+
+### Manual confirmation
+- Admin can confirm a booking without assigning a driver or partner
+- Assignment can be added later while status remains confirmed
 
 ## Financial Calculations
 

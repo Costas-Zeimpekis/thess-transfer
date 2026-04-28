@@ -88,6 +88,55 @@ Response: `200 { id, status: "cancelled" }`
 
 ---
 
+## Agent API (AI Microservice)
+
+All requests require two headers:
+```
+X-Agent-Timestamp: <unix seconds>
+X-Agent-Signature: <hex HMAC-SHA256>
+```
+
+Signature is computed over: `timestamp + "." + METHOD + "." + pathname + "." + body`  
+Secret key: `AI_AGENT_SECRET` env var. Requests older than 5 minutes are rejected.
+
+Example (Python):
+```python
+import hmac, hashlib, time, json, requests
+
+def agent_headers(method, path, body_dict, secret):
+    ts = str(int(time.time()))
+    body = json.dumps(body_dict) if body_dict else ""
+    payload = f"{ts}.{method}.{path}.{body}"
+    sig = hmac.new(secret.encode(), payload.encode(), hashlib.sha256).hexdigest()
+    return {"X-Agent-Timestamp": ts, "X-Agent-Signature": sig}
+```
+
+### Create booking
+```
+POST /api/agent/booking
+```
+Body: same fields as Intake API POST. `provider_email` or `provider_id` are optional.  
+Auto-generates `provider_booking_ref` if omitted (`AGENT-<timestamp>`).  
+Response: `201 { id, status: "pending" }`
+
+### Update booking
+```
+PUT /api/agent/booking
+```
+Body: `{ id, ...fields }` — only include fields to change.  
+Confirmed bookings with future pickup revert to `pending` and clear assignment (matches intake behaviour).  
+Completed or cancelled bookings return `409`.  
+Response: `200 { id, status }`
+
+### Change status
+```
+PATCH /api/agent/booking
+```
+Body: `{ id, status }` — allowed transitions: `pending→confirmed|cancelled`, `confirmed→pending|completed|cancelled`.  
+Response: `200 { id, status }`
+
+---
+
 ## Internal API (Dashboard)
 
 All routes require valid session cookie.
