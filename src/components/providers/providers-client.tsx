@@ -126,9 +126,9 @@ export default function ProvidersClient({
 	].filter(Boolean).length;
 
 	return (
-		<div className="flex gap-2 items-stretch h-full">
+		<div className="flex gap-2 items-stretch flex-1 min-h-0">
 			{/* Main content */}
-			<div className="flex-1 min-w-0 bg-white p-4 flex flex-col h-full">
+			<div className="flex-1 min-w-0 bg-white p-4 flex flex-col min-h-0">
 				<div className="flex items-center gap-3 mb-6">
 					<Navigation />
 					<div className="flex-1" />
@@ -136,10 +136,11 @@ export default function ProvidersClient({
 						Νέος Πάροχος
 					</Link>
 				</div>
-				<div className="rounded-md border overflow-auto" style={{ height: "100%" }}>
+				<div className="rounded-md border border-t-4 border-t-[#f9cf44] overflow-x-scroll overflow-y-scroll flex-1 min-h-0">
+					<div className="min-w-max">
 					<Table>
-						<TableHeader>
-							<TableRow className="bg-muted/50 border-t-[#f9cf44] border-t-4">
+						<TableHeader className="sticky top-0 z-10 [&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-muted">
+							<TableRow className="bg-muted">
 								<TableHead
 									className="font-extrabold overflow-hidden p-0 cursor-pointer select-none w-[22px]"
 									onClick={() => handleSort("id")}
@@ -210,6 +211,7 @@ export default function ProvidersClient({
 							))}
 						</TableBody>
 					</Table>
+					</div>
 				</div>
 				<DataPagination
 					page={page}

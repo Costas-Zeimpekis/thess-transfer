@@ -131,6 +131,8 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    scrollbar-color: var(--primary) transparent;
+    scrollbar-width: thin;
   }
   body {
     @apply bg-background text-foreground font-sans;
@@ -139,4 +141,27 @@
   input[type="checkbox"] {
     accent-color: #f9cf44;
   }
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--primary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+  opacity: 0.8;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
 }

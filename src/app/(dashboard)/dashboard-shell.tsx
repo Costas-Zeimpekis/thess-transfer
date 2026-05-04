@@ -107,7 +107,7 @@ export default function DashboardShell({
 				</div>
 
 				{/* Page content */}
-				<main className="flex-1 min-h-0 p-6 bg-[#eee] overflow-auto">
+				<main className="flex-1 min-h-0 p-6 bg-[#eee] overflow-auto flex flex-col">
 					{children}
 				</main>
 			</div>
