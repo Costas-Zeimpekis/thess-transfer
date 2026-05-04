@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FaSort, FaSortDown, FaSortUp } from "react-icons/fa";
+import { FaSort, FaSortDown, FaSortUp, FaSlidersH, FaTimes } from "react-icons/fa";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import DataPagination from "@/components/ui/data-pagination";
@@ -191,6 +191,7 @@ export default function BookingsClient({
 	const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 	const [page, setPage] = useState(1);
 	const [pageSize, setPageSize] = useState(20);
+	const [filtersOpen, setFiltersOpen] = useState(false);
 
 	function handleSort(col: string) {
 		setPage(1);
@@ -338,388 +339,400 @@ export default function BookingsClient({
 
 	const totalDiff = parseFloat(totals.difference);
 
-	return (
-		<>
-			{/* Main area: filters left, table right */}
-			<div className="flex gap-6 items-stretch h-full">
-				{/* Right: table + totals */}
-				<div className="flex-1 min-w-0 bg-white p-4 flex flex-col h-full">
-					{/* Toolbar: title + search + new button */}
-					<div className="flex items-center gap-3 mb-6 ">
-						<Navigation />
-						<div className="flex-1" />
-						{/* <Input
-							placeholder="Αναζήτηση ονόματος ή ref…"
-							className="w-64"
-							value={search}
-							onChange={(e) => setSearch(e.target.value)}
-							onKeyDown={(e) => {
-								if (e.key === "Enter") handleApply();
-							}}
-						/> */}
-						<Link href="/bookings/new" className={buttonVariants()}>
-							Νέα Κράτηση
-						</Link>
-					</div>
-					<div
-						className="rounded-md border overflow-auto"
-						style={{ height: "100%" }}
-					>
-						<Table>
-							<TableHeader>
-								<TableRow className="bg-muted/50  border-t-[#f9cf44] border-t-4">
-									<TableHead
-										className="font-extrabold  overflow-hidden p-0 cursor-pointer select-none"
-										onClick={() => handleSort("id")}
-									>
-										<div
-											className="flex items-center justify-start h-full px-4 py-3 bg-[#f9cf44] text-[#333333]"
-											style={{ paddingLeft: 10 }}
-										>
-											<div className="flex items-center gap-1">
-												#
-												<SortIcon
-													col="id"
-													sortCol={sortCol}
-													sortDir={sortDir}
-												/>
-											</div>
-										</div>
-									</TableHead>
-									<TableHead
-										className="font-extrabold cursor-pointer select-none"
-										onClick={() => handleSort("createdAt")}
-									>
-										<div className="flex items-center gap-1">
-											Ημ/νία Κράτησης
-											<SortIcon
-												col="createdAt"
-												sortCol={sortCol}
-												sortDir={sortDir}
-											/>
-										</div>
-									</TableHead>
-									<TableHead
-										className="font-extrabold cursor-pointer select-none"
-										onClick={() => handleSort("providerName")}
-									>
-										<div className="flex items-center gap-1">
-											Πάροχος
-											<SortIcon
-												col="providerName"
-												sortCol={sortCol}
-												sortDir={sortDir}
-											/>
-										</div>
-									</TableHead>
-									<TableHead
-										className="font-extrabold cursor-pointer select-none"
-										onClick={() => handleSort("providerBookingRef")}
-									>
-										<div className="flex items-center gap-1">
-											Ref Παρόχου
-											<SortIcon
-												col="providerBookingRef"
-												sortCol={sortCol}
-												sortDir={sortDir}
-											/>
-										</div>
-									</TableHead>
-									<TableHead
-										className="font-extrabold cursor-pointer select-none"
-										onClick={() => handleSort("pickupDatetime")}
-									>
-										<div className="flex items-center gap-1">
-											Ημ/νία Παραλαβής
-											<SortIcon
-												col="pickupDatetime"
-												sortCol={sortCol}
-												sortDir={sortDir}
-											/>
-										</div>
-									</TableHead>
+	const activeFilterCount = [
+		applied.from !== "",
+		applied.to !== "",
+		applied.status !== "all",
+		applied.bookingSource !== "all",
+		applied.providerId !== "all",
+		applied.driverId !== "all",
+		applied.vehicleId !== "all",
+		applied.partnerId !== "all",
+		applied.paymentMethod !== "all",
+		applied.search !== "",
+	].filter(Boolean).length;
 
-									<TableHead
-										className="font-extrabold cursor-pointer select-none"
-										onClick={() => handleSort("assignment")}
+	return (
+		<div className="flex gap-2 items-stretch h-full">
+			{/* Main content */}
+			<div className="flex-1 min-w-0 bg-white p-4 flex flex-col h-full">
+				<div className="flex items-center gap-3 mb-6 ">
+					<Navigation />
+					<div className="flex-1" />
+					<Link href="/bookings/new" className={buttonVariants()}>
+						Νέα Κράτηση
+					</Link>
+				</div>
+				<div
+					className="rounded-md border overflow-auto"
+					style={{ height: "100%" }}
+				>
+					<Table>
+						<TableHeader>
+							<TableRow className="bg-muted/50  border-t-[#f9cf44] border-t-4">
+								<TableHead
+									className="font-extrabold  overflow-hidden p-0 cursor-pointer select-none"
+									onClick={() => handleSort("id")}
+								>
+									<div
+										className="flex items-center justify-start h-full px-4 py-3 bg-[#f9cf44] text-[#333333]"
+										style={{ paddingLeft: 10 }}
 									>
 										<div className="flex items-center gap-1">
-											Ανάθεση
+											#
 											<SortIcon
-												col="assignment"
+												col="id"
 												sortCol={sortCol}
 												sortDir={sortDir}
 											/>
 										</div>
-									</TableHead>
-									<TableHead
-										className="font-extrabold cursor-pointer select-none"
-										onClick={() => handleSort("vehicleType")}
-									>
-										<div className="flex items-center gap-1">
-											Τύπος Οχήματος
-											<SortIcon
-												col="vehicleType"
-												sortCol={sortCol}
-												sortDir={sortDir}
-											/>
-										</div>
-									</TableHead>
-									<TableHead
-										className="font-extrabold cursor-pointer select-none"
-										onClick={() => handleSort("vehicleName")}
-									>
-										<div className="flex items-center gap-1">
-											Όχημα
-											<SortIcon
-												col="vehicleName"
-												sortCol={sortCol}
-												sortDir={sortDir}
-											/>
-										</div>
-									</TableHead>
-									<TableHead
-										className="font-extrabold cursor-pointer select-none"
-										onClick={() => handleSort("customerName")}
-									>
-										<div className="flex items-center gap-1">
-											Πελάτης
-											<SortIcon
-												col="customerName"
-												sortCol={sortCol}
-												sortDir={sortDir}
-											/>
-										</div>
-									</TableHead>
-									<TableHead
-										className="font-extrabold cursor-pointer select-none"
-										onClick={() => handleSort("status")}
-									>
-										<div className="flex items-center gap-1">
-											Κατάσταση
-											<SortIcon
-												col="status"
-												sortCol={sortCol}
-												sortDir={sortDir}
-											/>
-										</div>
-									</TableHead>
-									<TableHead className="font-extrabold">
-										Τρόπος Πληρωμής
-									</TableHead>
-									<TableHead className="text-right font-extrabold">
-										Πραγματική
-									</TableHead>
-									<TableHead className="text-right font-extrabold">
-										Δηλωθείσα
-									</TableHead>
-									<TableHead className="text-right font-extrabold">
-										Διαφορά
-									</TableHead>
-								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{loading &&
-									Array.from({ length: 8 }).map((_, i) => (
-										<TableRow key={i}>
-											<TableCell>
-												<Skeleton className="h-4 w-8" />
-											</TableCell>
-											<TableCell>
-												<Skeleton className="h-4 w-32" />
-											</TableCell>
-											<TableCell>
-												<Skeleton className="h-4 w-24" />
-											</TableCell>
-											<TableCell>
-												<Skeleton className="h-4 w-20" />
-											</TableCell>
-											<TableCell>
-												<Skeleton className="h-4 w-32" />
-											</TableCell>
-											<TableCell>
-												<Skeleton className="h-4 w-28" />
-											</TableCell>
-											<TableCell>
-												<Skeleton className="h-4 w-16" />
-											</TableCell>
-											<TableCell>
-												<Skeleton className="h-4 w-24" />
-											</TableCell>
-											<TableCell>
-												<Skeleton className="h-4 w-28" />
-											</TableCell>
-											<TableCell>
-												<Skeleton className="h-5 w-20 rounded-full" />
-											</TableCell>
-											<TableCell>
-												<Skeleton className="h-4 w-24" />
-											</TableCell>
-											<TableCell className="text-right">
-												<Skeleton className="h-4 w-14 ml-auto" />
-											</TableCell>
-											<TableCell className="text-right">
-												<Skeleton className="h-4 w-14 ml-auto" />
-											</TableCell>
-											<TableCell className="text-right">
-												<Skeleton className="h-4 w-14 ml-auto" />
-											</TableCell>
-										</TableRow>
-									))}
-								{!loading && sortedList.length === 0 && (
-									<TableRow>
-										<TableCell
-											colSpan={13}
-											className="text-center text-muted-foreground py-8"
-										>
-											Δεν βρέθηκαν κρατήσεις
+									</div>
+								</TableHead>
+								<TableHead
+									className="font-extrabold cursor-pointer select-none"
+									onClick={() => handleSort("createdAt")}
+								>
+									<div className="flex items-center gap-1">
+										Ημ/νία Κράτησης
+										<SortIcon
+											col="createdAt"
+											sortCol={sortCol}
+											sortDir={sortDir}
+										/>
+									</div>
+								</TableHead>
+								<TableHead
+									className="font-extrabold cursor-pointer select-none"
+									onClick={() => handleSort("providerName")}
+								>
+									<div className="flex items-center gap-1">
+										Πάροχος
+										<SortIcon
+											col="providerName"
+											sortCol={sortCol}
+											sortDir={sortDir}
+										/>
+									</div>
+								</TableHead>
+								<TableHead
+									className="font-extrabold cursor-pointer select-none"
+									onClick={() => handleSort("providerBookingRef")}
+								>
+									<div className="flex items-center gap-1">
+										Ref Παρόχου
+										<SortIcon
+											col="providerBookingRef"
+											sortCol={sortCol}
+											sortDir={sortDir}
+										/>
+									</div>
+								</TableHead>
+								<TableHead
+									className="font-extrabold cursor-pointer select-none"
+									onClick={() => handleSort("pickupDatetime")}
+								>
+									<div className="flex items-center gap-1">
+										Ημ/νία Παραλαβής
+										<SortIcon
+											col="pickupDatetime"
+											sortCol={sortCol}
+											sortDir={sortDir}
+										/>
+									</div>
+								</TableHead>
+
+								<TableHead
+									className="font-extrabold cursor-pointer select-none"
+									onClick={() => handleSort("assignment")}
+								>
+									<div className="flex items-center gap-1">
+										Ανάθεση
+										<SortIcon
+											col="assignment"
+											sortCol={sortCol}
+											sortDir={sortDir}
+										/>
+									</div>
+								</TableHead>
+								<TableHead
+									className="font-extrabold cursor-pointer select-none"
+									onClick={() => handleSort("vehicleType")}
+								>
+									<div className="flex items-center gap-1">
+										Τύπος Οχήματος
+										<SortIcon
+											col="vehicleType"
+											sortCol={sortCol}
+											sortDir={sortDir}
+										/>
+									</div>
+								</TableHead>
+								<TableHead
+									className="font-extrabold cursor-pointer select-none"
+									onClick={() => handleSort("vehicleName")}
+								>
+									<div className="flex items-center gap-1">
+										Όχημα
+										<SortIcon
+											col="vehicleName"
+											sortCol={sortCol}
+											sortDir={sortDir}
+										/>
+									</div>
+								</TableHead>
+								<TableHead
+									className="font-extrabold cursor-pointer select-none"
+									onClick={() => handleSort("customerName")}
+								>
+									<div className="flex items-center gap-1">
+										Πελάτης
+										<SortIcon
+											col="customerName"
+											sortCol={sortCol}
+											sortDir={sortDir}
+										/>
+									</div>
+								</TableHead>
+								<TableHead
+									className="font-extrabold cursor-pointer select-none"
+									onClick={() => handleSort("status")}
+								>
+									<div className="flex items-center gap-1">
+										Κατάσταση
+										<SortIcon
+											col="status"
+											sortCol={sortCol}
+											sortDir={sortDir}
+										/>
+									</div>
+								</TableHead>
+								<TableHead className="font-extrabold">
+									Τρόπος Πληρωμής
+								</TableHead>
+								<TableHead className="text-right font-extrabold">
+									Πραγματική
+								</TableHead>
+								<TableHead className="text-right font-extrabold">
+									Δηλωθείσα
+								</TableHead>
+								<TableHead className="text-right font-extrabold">
+									Διαφορά
+								</TableHead>
+							</TableRow>
+						</TableHeader>
+						<TableBody>
+							{loading &&
+								Array.from({ length: 8 }).map((_, i) => (
+									<TableRow key={i}>
+										<TableCell>
+											<Skeleton className="h-4 w-8" />
+										</TableCell>
+										<TableCell>
+											<Skeleton className="h-4 w-32" />
+										</TableCell>
+										<TableCell>
+											<Skeleton className="h-4 w-24" />
+										</TableCell>
+										<TableCell>
+											<Skeleton className="h-4 w-20" />
+										</TableCell>
+										<TableCell>
+											<Skeleton className="h-4 w-32" />
+										</TableCell>
+										<TableCell>
+											<Skeleton className="h-4 w-28" />
+										</TableCell>
+										<TableCell>
+											<Skeleton className="h-4 w-16" />
+										</TableCell>
+										<TableCell>
+											<Skeleton className="h-4 w-24" />
+										</TableCell>
+										<TableCell>
+											<Skeleton className="h-4 w-28" />
+										</TableCell>
+										<TableCell>
+											<Skeleton className="h-5 w-20 rounded-full" />
+										</TableCell>
+										<TableCell>
+											<Skeleton className="h-4 w-24" />
+										</TableCell>
+										<TableCell className="text-right">
+											<Skeleton className="h-4 w-14 ml-auto" />
+										</TableCell>
+										<TableCell className="text-right">
+											<Skeleton className="h-4 w-14 ml-auto" />
+										</TableCell>
+										<TableCell className="text-right">
+											<Skeleton className="h-4 w-14 ml-auto" />
 										</TableCell>
 									</TableRow>
-								)}
-								{!loading &&
-									paginatedList.map((b) => {
-										const realVal =
-											b.realPrice != null ? parseFloat(b.realPrice) : null;
-										const declVal =
-											b.declaredPrice != null
-												? parseFloat(b.declaredPrice)
-												: null;
-										const diff =
-											realVal != null && declVal != null
-												? realVal - declVal
-												: null;
-										const assignment = b.driverName ?? b.partnerName ?? "—";
-										const vehicleDisplay = b.vehicleName
-											? `${b.vehicleName} (${b.vehiclePlate})`
-											: "—";
-										return (
-											<TableRow
-												key={b.id}
-												className="cursor-pointer hover:bg-muted/50"
-												onClick={() => router.push(`/bookings/${b.id}`)}
-											>
-												<TableCell className="font-mono text-sm">
-													{b.id}
-												</TableCell>
-												<TableCell className="whitespace-nowrap text-sm">
-													{new Date(b.createdAt).toLocaleString("el-GR", {
-														day: "2-digit",
-														month: "2-digit",
-														year: "numeric",
-														hour: "2-digit",
-														minute: "2-digit",
-														hour12: false,
-													})}
-												</TableCell>
-												<TableCell>{b.providerName}</TableCell>
-												<TableCell className="font-mono text-sm">
-													{b.providerBookingRef}
-												</TableCell>
-												<TableCell className="whitespace-nowrap">
-													{new Date(b.pickupDatetime).toLocaleString("el-GR", {
-														day: "2-digit",
-														month: "2-digit",
-														year: "numeric",
-														hour: "2-digit",
-														minute: "2-digit",
-														hour12: false,
-													})}
-												</TableCell>
-												<TableCell className="text-sm">{assignment}</TableCell>
-												<TableCell>
-													{b.partnerId != null ? (
-														"—"
-													) : (
-														<Badge variant="outline" className="text-xs">
-															{VEHICLE_TYPE_LABELS[b.vehicleType] ??
-																b.vehicleType}
-														</Badge>
-													)}
-												</TableCell>
-												<TableCell className="text-sm">
-													{b.partnerId != null ? "—" : vehicleDisplay}
-												</TableCell>
-												<TableCell>{b.customerName}</TableCell>
-												<TableCell>
-													<Badge
-														variant="outline"
-														className={statusBadgeClass(b.status)}
-													>
-														{STATUS_LABELS[b.status] ?? b.status}
+								))}
+							{!loading && sortedList.length === 0 && (
+								<TableRow>
+									<TableCell
+										colSpan={13}
+										className="text-center text-muted-foreground py-8"
+									>
+										Δεν βρέθηκαν κρατήσεις
+									</TableCell>
+								</TableRow>
+							)}
+							{!loading &&
+								paginatedList.map((b) => {
+									const realVal =
+										b.realPrice != null ? parseFloat(b.realPrice) : null;
+									const declVal =
+										b.declaredPrice != null
+											? parseFloat(b.declaredPrice)
+											: null;
+									const diff =
+										realVal != null && declVal != null
+											? realVal - declVal
+											: null;
+									const assignment = b.driverName ?? b.partnerName ?? "—";
+									const vehicleDisplay = b.vehicleName
+										? `${b.vehicleName} (${b.vehiclePlate})`
+										: "—";
+									return (
+										<TableRow
+											key={b.id}
+											className="cursor-pointer hover:bg-muted/50"
+											onClick={() => router.push(`/bookings/${b.id}`)}
+										>
+											<TableCell className="font-mono text-sm">
+												{b.id}
+											</TableCell>
+											<TableCell className="whitespace-nowrap text-sm">
+												{new Date(b.createdAt).toLocaleString("el-GR", {
+													day: "2-digit",
+													month: "2-digit",
+													year: "numeric",
+													hour: "2-digit",
+													minute: "2-digit",
+													hour12: false,
+												})}
+											</TableCell>
+											<TableCell>{b.providerName}</TableCell>
+											<TableCell className="font-mono text-sm">
+												{b.providerBookingRef}
+											</TableCell>
+											<TableCell className="whitespace-nowrap">
+												{new Date(b.pickupDatetime).toLocaleString("el-GR", {
+													day: "2-digit",
+													month: "2-digit",
+													year: "numeric",
+													hour: "2-digit",
+													minute: "2-digit",
+													hour12: false,
+												})}
+											</TableCell>
+											<TableCell className="text-sm">{assignment}</TableCell>
+											<TableCell>
+												{b.partnerId != null ? (
+													"—"
+												) : (
+													<Badge variant="outline" className="text-xs">
+														{VEHICLE_TYPE_LABELS[b.vehicleType] ??
+															b.vehicleType}
 													</Badge>
-												</TableCell>
-												<TableCell className="text-sm">
-													{b.paymentMethod
-														? (PAYMENT_METHOD_LABELS[b.paymentMethod] ?? b.paymentMethod)
-														: "—"}
-												</TableCell>
-												<TableCell className="text-right font-mono text-sm">
-													{fmt(b.realPrice)}
-												</TableCell>
-												<TableCell className="text-right font-mono text-sm">
-													{fmt(b.declaredPrice)}
-												</TableCell>
-												<TableCell
-													className={`text-right font-mono text-sm ${diff != null ? diffClass(diff) : ""}`}
+												)}
+											</TableCell>
+											<TableCell className="text-sm">
+												{b.partnerId != null ? "—" : vehicleDisplay}
+											</TableCell>
+											<TableCell>{b.customerName}</TableCell>
+											<TableCell>
+												<Badge
+													variant="outline"
+													className={statusBadgeClass(b.status)}
 												>
-													{diff != null ? `€${diff.toFixed(2)}` : "—"}
-												</TableCell>
-											</TableRow>
-										);
-									})}
-							</TableBody>
-						</Table>
-					</div>
-
-					{/* Totals */}
-					<div className="mt-4 flex flex-wrap justify-end gap-6 rounded-md border bg-muted/40 px-4 py-3 text-sm">
-						<span>
-							<span className="text-muted-foreground">
-								Σύνολο Πραγματικής Τιμής:{" "}
-							</span>
-							<span className="font-semibold font-mono">
-								€{parseFloat(totals.realPrice).toFixed(2)}
-							</span>
-						</span>
-						<span>
-							<span className="text-muted-foreground">
-								Σύνολο Δηλωθείσας Τιμής:{" "}
-							</span>
-							<span className="font-semibold font-mono">
-								€{parseFloat(totals.declaredPrice).toFixed(2)}
-							</span>
-						</span>
-						<span>
-							<span className="text-muted-foreground">Σύνολο Διαφοράς: </span>
-							<span
-								className={`font-semibold font-mono ${totalDiff < 0 ? "text-red-600" : ""}`}
-							>
-								€{totalDiff.toFixed(2)}
-							</span>
-						</span>
-					</div>
-					<DataPagination
-						page={page}
-						totalPages={totalPages}
-						total={sortedList.length}
-						pageSize={pageSize}
-						itemLabel="κρατήσεις"
-						onPageChange={setPage}
-						onPageSizeChange={setPageSize}
-					/>
+													{STATUS_LABELS[b.status] ?? b.status}
+												</Badge>
+											</TableCell>
+											<TableCell className="text-sm">
+												{b.paymentMethod
+													? (PAYMENT_METHOD_LABELS[b.paymentMethod] ?? b.paymentMethod)
+													: "—"}
+											</TableCell>
+											<TableCell className="text-right font-mono text-sm">
+												{fmt(b.realPrice)}
+											</TableCell>
+											<TableCell className="text-right font-mono text-sm">
+												{fmt(b.declaredPrice)}
+											</TableCell>
+											<TableCell
+												className={`text-right font-mono text-sm ${diff != null ? diffClass(diff) : ""}`}
+											>
+												{diff != null ? `€${diff.toFixed(2)}` : "—"}
+											</TableCell>
+										</TableRow>
+									);
+								})}
+						</TableBody>
+					</Table>
 				</div>
-				{/* Left: filter panel */}
-				<aside className="w-80 shrink-0 flex flex-col">
-					<div className="flex flex-col flex-1 rounded-md border p-4 space-y-4 bg-[#333333] text-[#f9cf44]">
-						{/* <h2
-							className="text-[#fff] mb-10"
-							style={{ fontSize: 20, fontWeight: "bold" }}
+
+				{/* Totals */}
+				<div className="mt-4 flex flex-wrap justify-end gap-6 rounded-md border bg-muted/40 px-4 py-3 text-sm">
+					<span>
+						<span className="text-muted-foreground">
+							Σύνολο Πραγματικής Τιμής:{" "}
+						</span>
+						<span className="font-semibold font-mono">
+							€{parseFloat(totals.realPrice).toFixed(2)}
+						</span>
+					</span>
+					<span>
+						<span className="text-muted-foreground">
+							Σύνολο Δηλωθείσας Τιμής:{" "}
+						</span>
+						<span className="font-semibold font-mono">
+							€{parseFloat(totals.declaredPrice).toFixed(2)}
+						</span>
+					</span>
+					<span>
+						<span className="text-muted-foreground">Σύνολο Διαφοράς: </span>
+						<span
+							className={`font-semibold font-mono ${totalDiff < 0 ? "text-red-600" : ""}`}
 						>
-							Φíλτρα
-						</h2> */}
+							€{totalDiff.toFixed(2)}
+						</span>
+					</span>
+				</div>
+				<DataPagination
+					page={page}
+					totalPages={totalPages}
+					total={sortedList.length}
+					pageSize={pageSize}
+					itemLabel="κρατήσεις"
+					onPageChange={setPage}
+					onPageSizeChange={setPageSize}
+				/>
+			</div>
+
+			{/* Collapsible filter sidebar */}
+			<div className="flex items-stretch shrink-0">
+				{/* Toggle tab */}
+				<button
+					type="button"
+					onClick={() => setFiltersOpen(!filtersOpen)}
+					className="flex flex-col items-center justify-center gap-1 w-8 bg-[#333333] text-[#f9cf44] rounded-l-md hover:bg-[#3d3d3d] transition-colors cursor-pointer"
+				>
+					{filtersOpen ? <FaTimes size={13} /> : <FaSlidersH size={13} />}
+					{!filtersOpen && activeFilterCount > 0 && (
+						<span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#f9cf44] text-[#333333] text-[9px] font-bold">
+							{activeFilterCount}
+						</span>
+					)}
+				</button>
+
+				{/* Filter panel */}
+				{filtersOpen && (
+					<div className="w-72 flex flex-col p-4 space-y-4 bg-[#333333] text-[#f9cf44] rounded-r-md overflow-y-auto">
 						<Input
 							placeholder="Αναζήτηση ονόματος ή ref…"
-							className="w-full mb-10 bg-white text-[#333]"
+							className="w-full bg-white text-[#333]"
 							value={search}
 							onChange={(e) => setSearch(e.target.value)}
 							onKeyDown={(e) => {
@@ -980,7 +993,7 @@ export default function BookingsClient({
 							)}
 						</div>
 
-						<div className="flex flex-col gap-2 pt-1 mt-auto ">
+						<div className="flex flex-col gap-2 pt-1 mt-auto">
 							<Button
 								size="sm"
 								onClick={handleApply}
@@ -1000,8 +1013,8 @@ export default function BookingsClient({
 							</Button>
 						</div>
 					</div>
-				</aside>
+				)}
 			</div>
-		</>
+		</div>
 	);
 }

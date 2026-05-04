@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FaSort, FaSortDown, FaSortUp } from "react-icons/fa";
+import { FaSort, FaSortDown, FaSortUp, FaSlidersH, FaTimes } from "react-icons/fa";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import DataPagination from "@/components/ui/data-pagination";
@@ -63,14 +63,13 @@ export default function VehiclesClient({
 	const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 	const [page, setPage] = useState(1);
 	const [pageSize, setPageSize] = useState(20);
+	const [filtersOpen, setFiltersOpen] = useState(false);
 
-	// Filter state
 	const [searchName, setSearchName] = useState("");
 	const [searchPlate, setSearchPlate] = useState("");
 	const [typeFilter, setTypeFilter] = useState<"all" | "car" | "van" | "bus">("all");
 	const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
 
-	// Applied filters
 	const [applied, setApplied] = useState({
 		name: "",
 		plate: "",
@@ -162,138 +161,160 @@ export default function VehiclesClient({
 		page * pageSize,
 	);
 
-	return (
-		<>
-			<div className="flex gap-6 items-stretch h-full">
-				{/* Table */}
-				<div className="flex-1 min-w-0 bg-white p-4 flex flex-col h-full">
-					<div className="flex items-center gap-3 mb-6">
-						<Navigation />
-						<div className="flex-1" />
-						<Link href="/vehicles/new" className={buttonVariants()}>
-							Νέο Όχημα
-						</Link>
-					</div>
-					<div className="rounded-md border overflow-auto" style={{ height: "100%" }}>
-						<Table>
-							<TableHeader>
-								<TableRow className="bg-muted/50 border-t-[#f9cf44] border-t-4">
-									<TableHead
-										className="font-extrabold overflow-hidden p-0 cursor-pointer select-none w-[22px]"
-										onClick={() => handleSort("id")}
-									>
-										<div
-											className="flex items-center justify-start h-full px-4 py-3 bg-[#f9cf44] text-[#333333]"
-											style={{ paddingLeft: 10 }}
-										>
-											<div className="flex items-center gap-1">
-												#
-												<SortIcon col="id" sortCol={sortCol} sortDir={sortDir} />
-											</div>
-										</div>
-									</TableHead>
-									<TableHead
-										className="font-extrabold cursor-pointer select-none"
-										onClick={() => handleSort("name")}
-									>
-										<div className="flex items-center gap-1">
-											Όνομα
-											<SortIcon col="name" sortCol={sortCol} sortDir={sortDir} />
-										</div>
-									</TableHead>
-									<TableHead
-										className="font-extrabold cursor-pointer select-none"
-										onClick={() => handleSort("plate")}
-									>
-										<div className="flex items-center gap-1">
-											Πινακίδα
-											<SortIcon col="plate" sortCol={sortCol} sortDir={sortDir} />
-										</div>
-									</TableHead>
-									<TableHead
-										className="font-extrabold cursor-pointer select-none"
-										onClick={() => handleSort("type")}
-									>
-										<div className="flex items-center gap-1">
-											Τύπος
-											<SortIcon col="type" sortCol={sortCol} sortDir={sortDir} />
-										</div>
-									</TableHead>
-									<TableHead
-										className="font-extrabold cursor-pointer select-none"
-										onClick={() => handleSort("brand")}
-									>
-										<div className="flex items-center gap-1">
-											Μάρκα
-											<SortIcon col="brand" sortCol={sortCol} sortDir={sortDir} />
-										</div>
-									</TableHead>
-									<TableHead
-										className="font-extrabold cursor-pointer select-none"
-										onClick={() => handleSort("active")}
-									>
-										<div className="flex items-center gap-1">
-											Κατάσταση
-											<SortIcon col="active" sortCol={sortCol} sortDir={sortDir} />
-										</div>
-									</TableHead>
-								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{filteredAndSorted.length === 0 && (
-									<TableRow>
-										<TableCell
-											colSpan={6}
-											className="text-center text-muted-foreground py-8"
-										>
-											Δεν βρέθηκαν οχήματα
-										</TableCell>
-									</TableRow>
-								)}
-								{paginatedVehicles.map((vehicle) => (
-									<TableRow
-										key={vehicle.id}
-										className="cursor-pointer hover:bg-muted/50"
-										onClick={() => router.push(`/vehicles/${vehicle.id}`)}
-									>
-										<TableCell className="font-mono text-sm">{vehicle.id}</TableCell>
-										<TableCell className="font-medium">{vehicle.name}</TableCell>
-										<TableCell>{vehicle.plate}</TableCell>
-										<TableCell>
-											<Badge variant="outline">
-												{vehicleTypeLabels[vehicle.type] ?? vehicle.type}
-											</Badge>
-										</TableCell>
-										<TableCell>{vehicle.brand ?? "—"}</TableCell>
-										<TableCell>
-											{vehicle.active ? (
-												<Badge variant="default">Ενεργό</Badge>
-											) : (
-												<Badge variant="secondary">Ανενεργό</Badge>
-											)}
-										</TableCell>
-									</TableRow>
-								))}
-							</TableBody>
-						</Table>
-					</div>
-					<DataPagination
-						page={page}
-						totalPages={totalPages}
-						total={filteredAndSorted.length}
-						pageSize={pageSize}
-						itemLabel="οχήματα"
-						onPageChange={setPage}
-						onPageSizeChange={setPageSize}
-					/>
-				</div>
+	const activeFilterCount = [
+		applied.name !== "",
+		applied.plate !== "",
+		applied.type !== "all",
+		applied.status !== "all",
+	].filter(Boolean).length;
 
-				{/* Filter sidebar */}
-				<aside className="w-80 shrink-0 flex flex-col">
-					<div className="flex flex-col flex-1 rounded-md border p-4 space-y-4 bg-[#333333] text-[#f9cf44]">
+	return (
+		<div className="flex gap-2 items-stretch h-full">
+			{/* Main content */}
+			<div className="flex-1 min-w-0 bg-white p-4 flex flex-col h-full">
+				<div className="flex items-center gap-3 mb-6">
+					<Navigation />
+					<div className="flex-1" />
+					<Link href="/vehicles/new" className={buttonVariants()}>
+						Νέο Όχημα
+					</Link>
+				</div>
+				<div className="rounded-md border overflow-auto" style={{ height: "100%" }}>
+					<Table>
+						<TableHeader>
+							<TableRow className="bg-muted/50 border-t-[#f9cf44] border-t-4">
+								<TableHead
+									className="font-extrabold overflow-hidden p-0 cursor-pointer select-none w-[22px]"
+									onClick={() => handleSort("id")}
+								>
+									<div
+										className="flex items-center justify-start h-full px-4 py-3 bg-[#f9cf44] text-[#333333]"
+										style={{ paddingLeft: 10 }}
+									>
+										<div className="flex items-center gap-1">
+											#
+											<SortIcon col="id" sortCol={sortCol} sortDir={sortDir} />
+										</div>
+									</div>
+								</TableHead>
+								<TableHead
+									className="font-extrabold cursor-pointer select-none"
+									onClick={() => handleSort("name")}
+								>
+									<div className="flex items-center gap-1">
+										Όνομα
+										<SortIcon col="name" sortCol={sortCol} sortDir={sortDir} />
+									</div>
+								</TableHead>
+								<TableHead
+									className="font-extrabold cursor-pointer select-none"
+									onClick={() => handleSort("plate")}
+								>
+									<div className="flex items-center gap-1">
+										Πινακίδα
+										<SortIcon col="plate" sortCol={sortCol} sortDir={sortDir} />
+									</div>
+								</TableHead>
+								<TableHead
+									className="font-extrabold cursor-pointer select-none"
+									onClick={() => handleSort("type")}
+								>
+									<div className="flex items-center gap-1">
+										Τύπος
+										<SortIcon col="type" sortCol={sortCol} sortDir={sortDir} />
+									</div>
+								</TableHead>
+								<TableHead
+									className="font-extrabold cursor-pointer select-none"
+									onClick={() => handleSort("brand")}
+								>
+									<div className="flex items-center gap-1">
+										Μάρκα
+										<SortIcon col="brand" sortCol={sortCol} sortDir={sortDir} />
+									</div>
+								</TableHead>
+								<TableHead
+									className="font-extrabold cursor-pointer select-none"
+									onClick={() => handleSort("active")}
+								>
+									<div className="flex items-center gap-1">
+										Κατάσταση
+										<SortIcon col="active" sortCol={sortCol} sortDir={sortDir} />
+									</div>
+								</TableHead>
+							</TableRow>
+						</TableHeader>
+						<TableBody>
+							{filteredAndSorted.length === 0 && (
+								<TableRow>
+									<TableCell
+										colSpan={6}
+										className="text-center text-muted-foreground py-8"
+									>
+										Δεν βρέθηκαν οχήματα
+									</TableCell>
+								</TableRow>
+							)}
+							{paginatedVehicles.map((vehicle) => (
+								<TableRow
+									key={vehicle.id}
+									className="cursor-pointer hover:bg-muted/50"
+									onClick={() => router.push(`/vehicles/${vehicle.id}`)}
+								>
+									<TableCell className="font-mono text-sm">{vehicle.id}</TableCell>
+									<TableCell className="font-medium">{vehicle.name}</TableCell>
+									<TableCell>{vehicle.plate}</TableCell>
+									<TableCell>
+										<Badge variant="outline">
+											{vehicleTypeLabels[vehicle.type] ?? vehicle.type}
+										</Badge>
+									</TableCell>
+									<TableCell>{vehicle.brand ?? "—"}</TableCell>
+									<TableCell>
+										{vehicle.active ? (
+											<Badge variant="default">Ενεργό</Badge>
+										) : (
+											<Badge variant="secondary">Ανενεργό</Badge>
+										)}
+									</TableCell>
+								</TableRow>
+							))}
+						</TableBody>
+					</Table>
+				</div>
+				<DataPagination
+					page={page}
+					totalPages={totalPages}
+					total={filteredAndSorted.length}
+					pageSize={pageSize}
+					itemLabel="οχήματα"
+					onPageChange={setPage}
+					onPageSizeChange={setPageSize}
+				/>
+			</div>
+
+			{/* Collapsible filter sidebar */}
+			<div className="flex items-stretch shrink-0">
+				{/* Toggle tab */}
+				<button
+					type="button"
+					onClick={() => setFiltersOpen(!filtersOpen)}
+					className="flex flex-col items-center justify-center gap-1 w-8 bg-[#333333] text-[#f9cf44] rounded-l-md hover:bg-[#3d3d3d] transition-colors cursor-pointer"
+				>
+					{filtersOpen ? <FaTimes size={13} /> : <FaSlidersH size={13} />}
+					{!filtersOpen && activeFilterCount > 0 && (
+						<span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#f9cf44] text-[#333333] text-[9px] font-bold">
+							{activeFilterCount}
+						</span>
+					)}
+				</button>
+
+				{/* Filter panel */}
+				{filtersOpen && (
+					<div className="w-72 flex flex-col p-4 space-y-4 bg-[#333333] text-[#f9cf44] rounded-r-md overflow-y-auto">
 						<div className="space-y-1">
 							<Input
-								className="h-8 w-full bg-white text-[#333333] mb-6"
+								className="h-8 w-full bg-white text-[#333333]"
 								id="filterName"
 								onChange={(e) => setSearchName(e.target.value)}
 								onKeyDown={(e) => { if (e.key === "Enter") handleApply(); }}
@@ -377,8 +398,8 @@ export default function VehiclesClient({
 							</Button>
 						</div>
 					</div>
-				</aside>
+				)}
 			</div>
-		</>
+		</div>
 	);
 }

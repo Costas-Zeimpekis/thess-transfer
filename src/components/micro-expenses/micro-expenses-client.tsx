@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Pencil, Trash2, Check, X, Plus } from "lucide-react";
+import { FaSlidersH, FaTimes } from "react-icons/fa";
 import Navigation from "@/components/ui/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -78,8 +79,8 @@ export default function MicroExpensesClient({
 	const [editId, setEditId] = useState<number | null>(null);
 	const [editState, setEditState] = useState<EditState | null>(null);
 	const [saving, setSaving] = useState(false);
+	const [filtersOpen, setFiltersOpen] = useState(false);
 
-	// Filters
 	const [filterDriver, setFilterDriver] = useState("all");
 	const [filterFrom, setFilterFrom] = useState("");
 	const [filterTo, setFilterTo] = useState("");
@@ -117,6 +118,12 @@ export default function MicroExpensesClient({
 		() => filtered.reduce((sum, e) => sum + parseFloat(e.price || "0"), 0),
 		[filtered],
 	);
+
+	const activeFilterCount = [
+		appliedDriver !== "all",
+		appliedFrom !== "",
+		appliedTo !== "",
+	].filter(Boolean).length;
 
 	function handleAddNew() {
 		setNewExpense({
@@ -236,7 +243,7 @@ export default function MicroExpensesClient({
 	}
 
 	return (
-		<div className="flex gap-6 items-stretch h-full">
+		<div className="flex gap-2 items-stretch h-full">
 			{/* Main content */}
 			<div className="flex-1 min-w-0 bg-white p-4 flex flex-col h-full gap-4">
 				<div className="flex items-center gap-3">
@@ -248,7 +255,6 @@ export default function MicroExpensesClient({
 					</Button>
 				</div>
 
-				{/* Inline new expense form */}
 				{newExpense && (
 					<div className="rounded-md border border-[#f9cf44] bg-amber-50 p-4 flex flex-col gap-3">
 						<p className="font-semibold text-sm text-[#333]">Νέο Μικροέξοδο</p>
@@ -330,12 +336,7 @@ export default function MicroExpensesClient({
 							/>
 						</div>
 						<div className="flex gap-2 justify-end">
-							<Button
-								size="sm"
-								variant="outline"
-								onClick={handleCancelNew}
-								disabled={saving}
-							>
+							<Button size="sm" variant="outline" onClick={handleCancelNew} disabled={saving}>
 								Ακύρωση
 							</Button>
 							<Button size="sm" onClick={handleSaveNew} disabled={saving}>
@@ -345,7 +346,6 @@ export default function MicroExpensesClient({
 					</div>
 				)}
 
-				{/* Expenses table */}
 				<div className="rounded-md border overflow-auto flex-1">
 					<Table>
 						<TableHeader>
@@ -363,10 +363,7 @@ export default function MicroExpensesClient({
 						<TableBody>
 							{filtered.length === 0 && (
 								<TableRow>
-									<TableCell
-										colSpan={6}
-										className="text-center text-muted-foreground py-8"
-									>
+									<TableCell colSpan={6} className="text-center text-muted-foreground py-8">
 										Δεν βρέθηκαν μικροέξοδα
 									</TableCell>
 								</TableRow>
@@ -439,9 +436,7 @@ export default function MicroExpensesClient({
 												className="h-8 text-sm"
 												value={editState.description}
 												onChange={(e) =>
-													setEditState((s) =>
-														s && { ...s, description: e.target.value },
-													)
+													setEditState((s) => s && { ...s, description: e.target.value })
 												}
 											/>
 										</TableCell>
@@ -505,7 +500,6 @@ export default function MicroExpensesClient({
 					</Table>
 				</div>
 
-				{/* Footer total */}
 				<div className="flex justify-end pr-2">
 					<span className="text-sm font-semibold">
 						Σύνολο:{" "}
@@ -514,65 +508,82 @@ export default function MicroExpensesClient({
 				</div>
 			</div>
 
-			{/* Filter sidebar */}
-			<aside className="w-72 shrink-0 flex flex-col">
-				<div className="flex flex-col flex-1 rounded-md border p-4 space-y-4 bg-[#333333] text-[#f9cf44]">
-					<div className="space-y-1">
-						<Label className="text-xs">Οδηγός</Label>
-						<Select value={filterDriver} onValueChange={(v) => setFilterDriver(v ?? "all")}>
-							<SelectTrigger className="h-8 bg-white text-[#333333] text-sm">
-								<SelectValue placeholder="Όλοι" />
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value="all">Όλοι</SelectItem>
-								{drivers.map((d) => (
-									<SelectItem key={d.id} value={String(d.id)}>
-										{d.fullName}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-					</div>
+			{/* Collapsible filter sidebar */}
+			<div className="flex items-stretch shrink-0">
+				{/* Toggle tab */}
+				<button
+					type="button"
+					onClick={() => setFiltersOpen(!filtersOpen)}
+					className="flex flex-col items-center justify-center gap-1 w-8 bg-[#333333] text-[#f9cf44] rounded-l-md hover:bg-[#3d3d3d] transition-colors cursor-pointer"
+				>
+					{filtersOpen ? <FaTimes size={13} /> : <FaSlidersH size={13} />}
+					{!filtersOpen && activeFilterCount > 0 && (
+						<span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#f9cf44] text-[#333333] text-[9px] font-bold">
+							{activeFilterCount}
+						</span>
+					)}
+				</button>
 
-					<div className="space-y-1">
-						<Label className="text-xs">Από</Label>
-						<Input
-							type="date"
-							className="h-8 bg-white text-[#333333] text-sm"
-							value={filterFrom}
-							onChange={(e) => setFilterFrom(e.target.value)}
-						/>
-					</div>
+				{/* Filter panel */}
+				{filtersOpen && (
+					<div className="w-72 flex flex-col p-4 space-y-4 bg-[#333333] text-[#f9cf44] rounded-r-md overflow-y-auto">
+						<div className="space-y-1">
+							<Label className="text-xs">Οδηγός</Label>
+							<Select value={filterDriver} onValueChange={(v) => setFilterDriver(v ?? "all")}>
+								<SelectTrigger className="h-8 bg-white text-[#333333] text-sm">
+									<SelectValue placeholder="Όλοι" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="all">Όλοι</SelectItem>
+									{drivers.map((d) => (
+										<SelectItem key={d.id} value={String(d.id)}>
+											{d.fullName}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
 
-					<div className="space-y-1">
-						<Label className="text-xs">Έως</Label>
-						<Input
-							type="date"
-							className="h-8 bg-white text-[#333333] text-sm"
-							value={filterTo}
-							onChange={(e) => setFilterTo(e.target.value)}
-						/>
-					</div>
+						<div className="space-y-1">
+							<Label className="text-xs">Από</Label>
+							<Input
+								type="date"
+								className="h-8 bg-white text-[#333333] text-sm"
+								value={filterFrom}
+								onChange={(e) => setFilterFrom(e.target.value)}
+							/>
+						</div>
 
-					<div className="flex flex-col gap-2 pt-1 mt-auto">
-						<Button
-							size="sm"
-							onClick={handleApplyFilters}
-							className="hover:bg-[#333] hover:ring-2 hover:ring-[#f9cf44]"
-						>
-							Εφαρμογή
-						</Button>
-						<Button
-							size="sm"
-							variant="outline"
-							onClick={handleResetFilters}
-							className="bg-white text-[#333333] border-[#333333] hover:bg-[#333] hover:ring-2 hover:ring-[#f9cf44] hover:text-[#f9cf44]"
-						>
-							Καθαρισμός
-						</Button>
+						<div className="space-y-1">
+							<Label className="text-xs">Έως</Label>
+							<Input
+								type="date"
+								className="h-8 bg-white text-[#333333] text-sm"
+								value={filterTo}
+								onChange={(e) => setFilterTo(e.target.value)}
+							/>
+						</div>
+
+						<div className="flex flex-col gap-2 pt-1 mt-auto">
+							<Button
+								size="sm"
+								onClick={handleApplyFilters}
+								className="hover:bg-[#333] hover:ring-2 hover:ring-[#f9cf44]"
+							>
+								Εφαρμογή
+							</Button>
+							<Button
+								size="sm"
+								variant="outline"
+								onClick={handleResetFilters}
+								className="bg-white text-[#333333] border-[#333333] hover:bg-[#333] hover:ring-2 hover:ring-[#f9cf44] hover:text-[#f9cf44]"
+							>
+								Καθαρισμός
+							</Button>
+						</div>
 					</div>
-				</div>
-			</aside>
+				)}
+			</div>
 		</div>
 	);
 }
