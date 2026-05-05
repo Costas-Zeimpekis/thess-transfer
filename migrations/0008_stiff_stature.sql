@@ -1,0 +1,1 @@
+ALTER TABLE "providers" ADD COLUMN "tax_id" varchar(50);

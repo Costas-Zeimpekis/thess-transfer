@@ -89,6 +89,7 @@ export const providers = pgTable("providers", {
 	id: serial("id").primaryKey(),
 	name: varchar("name", { length: 200 }).notNull(),
 	slug: varchar("slug", { length: 100 }).unique().notNull(),
+	taxId: varchar("tax_id", { length: 50 }),
 	createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 	updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });

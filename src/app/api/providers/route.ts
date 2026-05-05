@@ -34,7 +34,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json()
-  const { name, slug } = body
+  const { name, slug, tax_id } = body
 
   if (!name || !slug) {
     return NextResponse.json({ error: 'Το όνομα και το slug είναι υποχρεωτικά' }, { status: 400 })
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
 
   const result = await db
     .insert(providers)
-    .values({ name, slug })
+    .values({ name, slug, taxId: tax_id ?? null })
     .returning()
 
   const newProvider = result[0]

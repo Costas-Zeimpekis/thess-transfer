@@ -1,7 +1,8 @@
 "use client";
 
+import React from "react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FaSort, FaSortDown, FaSortUp, FaSlidersH, FaTimes } from "react-icons/fa";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -18,6 +19,11 @@ import {
 } from "@/components/ui/table";
 import Navigation from "../ui/navigation";
 import { type Provider } from "./provider-sheet";
+import {
+	DEFAULT_PROVIDER_COLUMNS,
+	loadProviderColumns,
+	type ProviderColumn,
+} from "@/lib/provider-columns";
 
 type ProvidersClientProps = {
 	providers: Provider[];
@@ -55,6 +61,9 @@ export default function ProvidersClient({
 	const [searchSlug, setSearchSlug] = useState("");
 
 	const [applied, setApplied] = useState({ name: "", slug: "" });
+	const [columnConfig, setColumnConfig] = useState<ProviderColumn[]>(DEFAULT_PROVIDER_COLUMNS);
+
+	useEffect(() => { setColumnConfig(loadProviderColumns()); }, []);
 
 	function handleApply() {
 		setPage(1);
@@ -114,6 +123,40 @@ export default function ProvidersClient({
 		});
 	}, [initialProviders, applied, sortCol, sortDir]);
 
+	const visibleCols = columnConfig.filter((c) => c.visible);
+
+	const colDefs: Record<string, {
+		head: React.ReactNode;
+		cell: (p: Provider) => React.ReactNode;
+	}> = {
+		name: {
+			head: <div className="flex items-center gap-1">Όνομα<SortIcon col="name" sortCol={sortCol} sortDir={sortDir} /></div>,
+			cell: (p) => <TableCell key="name" className="font-medium">{p.name}</TableCell>,
+		},
+		slug: {
+			head: <div className="flex items-center gap-1">Slug<SortIcon col="slug" sortCol={sortCol} sortDir={sortDir} /></div>,
+			cell: (p) => (
+				<TableCell key="slug">
+					<code className="text-xs bg-muted px-1 py-0.5 rounded">{p.slug}</code>
+				</TableCell>
+			),
+		},
+		taxId: {
+			head: "ΑΦΜ",
+			cell: (p) => <TableCell key="taxId">{p.taxId ?? "—"}</TableCell>,
+		},
+		emails: {
+			head: "Emails",
+			cell: (p) => (
+				<TableCell key="emails" className="text-sm text-muted-foreground">
+					{p.emails.length > 0 ? p.emails.map((e) => e.email).join(", ") : "—"}
+				</TableCell>
+			),
+		},
+	};
+
+	const sortableKeys = new Set(["name", "slug"]);
+
 	const totalPages = Math.max(1, Math.ceil(filteredAndSorted.length / pageSize));
 	const paginatedProviders = filteredAndSorted.slice(
 		(page - 1) * pageSize,
@@ -155,34 +198,22 @@ export default function ProvidersClient({
 										</div>
 									</div>
 								</TableHead>
-								<TableHead
-									className="font-extrabold cursor-pointer select-none"
-									onClick={() => handleSort("name")}
-								>
-									<div className="flex items-center gap-1">
-										Όνομα
-										<SortIcon col="name" sortCol={sortCol} sortDir={sortDir} />
-									</div>
-								</TableHead>
-								<TableHead
-									className="font-extrabold cursor-pointer select-none"
-									onClick={() => handleSort("slug")}
-								>
-									<div className="flex items-center gap-1">
-										Slug
-										<SortIcon col="slug" sortCol={sortCol} sortDir={sortDir} />
-									</div>
-								</TableHead>
-								<TableHead className="font-extrabold">
-									Emails
-								</TableHead>
+								{visibleCols.map((col) => (
+									<TableHead
+										key={col.key}
+										className={`font-extrabold${sortableKeys.has(col.key) ? " cursor-pointer select-none" : ""}`}
+										onClick={sortableKeys.has(col.key) ? () => handleSort(col.key) : undefined}
+									>
+										{colDefs[col.key]?.head}
+									</TableHead>
+								))}
 							</TableRow>
 						</TableHeader>
 						<TableBody>
 							{filteredAndSorted.length === 0 && (
 								<TableRow>
 									<TableCell
-										colSpan={4}
+										colSpan={1 + visibleCols.length}
 										className="text-center text-muted-foreground py-8"
 									>
 										Δεν βρέθηκαν πάροχοι
@@ -196,17 +227,11 @@ export default function ProvidersClient({
 									onClick={() => router.push(`/providers/${provider.id}`)}
 								>
 									<TableCell className="font-mono text-sm">{provider.id}</TableCell>
-									<TableCell className="font-medium">{provider.name}</TableCell>
-									<TableCell>
-										<code className="text-xs bg-muted px-1 py-0.5 rounded">
-											{provider.slug}
-										</code>
-									</TableCell>
-									<TableCell className="text-sm text-muted-foreground">
-										{provider.emails.length > 0
-											? provider.emails.map((e) => e.email).join(", ")
-											: "—"}
-									</TableCell>
+									{visibleCols.map((col) => (
+										<React.Fragment key={col.key}>
+											{colDefs[col.key]?.cell(provider)}
+										</React.Fragment>
+									))}
 								</TableRow>
 							))}
 						</TableBody>

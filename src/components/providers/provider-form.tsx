@@ -48,6 +48,7 @@ export default function ProviderForm({ id }: ProviderFormProps) {
 
   const [name, setName] = useState('')
   const [slug, setSlug] = useState('')
+  const [taxId, setTaxId] = useState('')
   const [slugManual, setSlugManual] = useState(false)
   const [emails, setEmails] = useState<ProviderEmail[]>([])
 
@@ -100,6 +101,7 @@ export default function ProviderForm({ id }: ProviderFormProps) {
         const provider = await res.json()
         setName(provider.name ?? '')
         setSlug(provider.slug ?? '')
+        setTaxId(provider.taxId ?? '')
         setEmails(provider.emails ?? [])
         setSlugManual(true)
       } catch {
@@ -125,7 +127,7 @@ export default function ProviderForm({ id }: ProviderFormProps) {
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, slug }),
+        body: JSON.stringify({ name, slug, tax_id: taxId || null }),
       })
 
       if (!res.ok) {
@@ -216,6 +218,16 @@ export default function ProviderForm({ id }: ProviderFormProps) {
           {fieldErrors.name && (
             <p className="text-xs text-destructive">{fieldErrors.name}</p>
           )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="provTaxId">ΑΦΜ</Label>
+          <Input
+            id="provTaxId"
+            value={taxId}
+            onChange={(e) => setTaxId(e.target.value)}
+            disabled={loading}
+          />
         </div>
 
         <div className="space-y-2">

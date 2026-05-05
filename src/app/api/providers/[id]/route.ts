@@ -37,7 +37,7 @@ export async function PUT(request: Request, { params }: Params) {
 
   const { id } = await params
   const body = await request.json()
-  const { name, slug } = body
+  const { name, slug, tax_id } = body
 
   if (!name || !slug) {
     return NextResponse.json({ error: 'Το όνομα και το slug είναι υποχρεωτικά' }, { status: 400 })
@@ -45,7 +45,7 @@ export async function PUT(request: Request, { params }: Params) {
 
   const result = await db
     .update(providers)
-    .set({ name, slug, updatedAt: new Date() })
+    .set({ name, slug, taxId: tax_id ?? null, updatedAt: new Date() })
     .where(eq(providers.id, Number(id)))
     .returning()
 

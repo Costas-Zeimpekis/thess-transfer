@@ -32,6 +32,7 @@ export type Provider = {
   id: number
   name: string
   slug: string
+  taxId: string | null
   emails: ProviderEmail[]
 }
 
