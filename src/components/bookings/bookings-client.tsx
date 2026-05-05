@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FaSort, FaSortDown, FaSortUp, FaSlidersH, FaTimes } from "react-icons/fa";
+import { Download } from "lucide-react";
+import * as XLSX from "xlsx";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import DataPagination from "@/components/ui/data-pagination";
@@ -286,7 +288,7 @@ export default function BookingsClient({
 			if (filters.driverId !== "all") params.set("driver", filters.driverId);
 			if (filters.vehicleId !== "all") params.set("vehicle", filters.vehicleId);
 			if (filters.partnerId !== "all") params.set("partner", filters.partnerId);
-		if (filters.paymentMethod !== "all") params.set("paymentMethod", filters.paymentMethod);
+			if (filters.paymentMethod !== "all") params.set("paymentMethod", filters.paymentMethod);
 			if (filters.from) params.set("from", filters.from);
 			if (filters.to) params.set("to", filters.to);
 			if (filters.search) params.set("search", filters.search);
@@ -346,6 +348,34 @@ export default function BookingsClient({
 			paymentMethod: "all",
 			search: "",
 		});
+	}
+
+	function handleExport() {
+		const now = new Date();
+		const pad = (n: number) => String(n).padStart(2, "0");
+		const filename = `bookings-${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}-${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}.xlsx`;
+		const rows = sortedList.map((b) => ({
+			"#": b.id,
+			"Ref Παρόχου": b.providerBookingRef,
+			"Πάροχος": b.providerName,
+			"Ημ/νία Κράτησης": new Date(b.createdAt).toLocaleString("el-GR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }),
+			"Ημ/νία Παραλαβής": new Date(b.pickupDatetime).toLocaleString("el-GR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }),
+			"Πελάτης": b.customerName,
+			"Τηλέφωνο": b.customerPhone ?? "",
+			"Email": b.customerEmail ?? "",
+			"Κατάσταση": STATUS_LABELS[b.status] ?? b.status,
+			"Ανάθεση": b.driverName ?? b.partnerName ?? "",
+			"Τύπος Οχήματος": b.partnerId != null ? "" : (VEHICLE_TYPE_LABELS[b.vehicleType] ?? b.vehicleType),
+			"Όχημα": b.partnerId != null ? "" : (b.vehicleName ? `${b.vehicleName} (${b.vehiclePlate})` : ""),
+			"Τρόπος Πληρωμής": b.paymentMethod ? (PAYMENT_METHOD_LABELS[b.paymentMethod] ?? b.paymentMethod) : "",
+			"Πραγματική Τιμή (€)": b.realPrice != null ? parseFloat(b.realPrice) : "",
+			"Δηλωθείσα Τιμή (€)": b.declaredPrice != null ? parseFloat(b.declaredPrice) : "",
+			"Σημειώσεις": b.notes ?? "",
+		}));
+		const ws = XLSX.utils.json_to_sheet(rows);
+		const wb = XLSX.utils.book_new();
+		XLSX.utils.book_append_sheet(wb, ws, "Κρατήσεις");
+		XLSX.writeFile(wb, filename);
 	}
 
 	const totalDiff = parseFloat(totals.difference);
@@ -487,74 +517,79 @@ export default function BookingsClient({
 			<div className="flex-1 min-w-0 bg-white p-4 flex flex-col min-h-0">
 				<div className="flex items-center gap-3 mb-6 ">
 					<Navigation />
-					<div className="flex-1" />
+					<div className="flex-1 gap-2" />
+
 					<Link href="/bookings/new" className={buttonVariants()}>
 						Νέα Κράτηση
 					</Link>
+					<Button variant="outline" onClick={handleExport} disabled={sortedList.length === 0 || loading}>
+						<Download size={16} />
+						Εξαγωγή XLSX
+					</Button>
 				</div>
 				<div className="rounded-md border border-t-4 border-t-[#f9cf44] overflow-x-scroll overflow-y-scroll flex-1 min-h-0">
 					<div className="min-w-max">
-					<Table>
-						<TableHeader className="sticky top-0 z-10 [&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-muted">
-							<TableRow className="bg-muted">
-								<TableHead
-									className="font-extrabold overflow-hidden p-0 cursor-pointer select-none"
-									onClick={() => handleSort("id")}
-								>
-									<div className="flex items-center justify-start h-full px-4 py-3 bg-[#f9cf44] text-[#333333]" style={{ paddingLeft: 10 }}>
-										<div className="flex items-center gap-1">
-											#
-											<SortIcon col="id" sortCol={sortCol} sortDir={sortDir} />
-										</div>
-									</div>
-								</TableHead>
-								{visibleCols.map((col) => {
-									const def = colDefs[col.key];
-									if (!def) return null;
-									return (
-										<TableHead key={col.key} className={def.headClass} onClick={def.onClick}>
-											{def.head}
-										</TableHead>
-									);
-								})}
-							</TableRow>
-						</TableHeader>
-						<TableBody>
-							{loading &&
-								Array.from({ length: 8 }).map((_, i) => (
-									<TableRow key={i}>
-										<TableCell><Skeleton className="h-4 w-8" /></TableCell>
-										{visibleCols.map((col) => (
-											<React.Fragment key={col.key}>
-												{colDefs[col.key]?.skeleton}
-											</React.Fragment>
-										))}
-									</TableRow>
-								))}
-							{!loading && sortedList.length === 0 && (
-								<TableRow>
-									<TableCell colSpan={colCount} className="text-center text-muted-foreground py-8">
-										Δεν βρέθηκαν κρατήσεις
-									</TableCell>
-								</TableRow>
-							)}
-							{!loading &&
-								paginatedList.map((b) => (
-									<TableRow
-										key={b.id}
-										className="cursor-pointer hover:bg-muted/50"
-										onClick={() => router.push(`/bookings/${b.id}`)}
+						<Table>
+							<TableHeader className="sticky top-0 z-10 [&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-muted">
+								<TableRow className="bg-muted">
+									<TableHead
+										className="font-extrabold overflow-hidden p-0 cursor-pointer select-none"
+										onClick={() => handleSort("id")}
 									>
-										<TableCell className="font-mono text-sm">{b.id}</TableCell>
-										{visibleCols.map((col) => (
-											<React.Fragment key={col.key}>
-												{colDefs[col.key]?.cell(b)}
-											</React.Fragment>
-										))}
+										<div className="flex items-center justify-start h-full px-4 py-3 bg-[#f9cf44] text-[#333333]" style={{ paddingLeft: 10 }}>
+											<div className="flex items-center gap-1">
+												#
+												<SortIcon col="id" sortCol={sortCol} sortDir={sortDir} />
+											</div>
+										</div>
+									</TableHead>
+									{visibleCols.map((col) => {
+										const def = colDefs[col.key];
+										if (!def) return null;
+										return (
+											<TableHead key={col.key} className={def.headClass} onClick={def.onClick}>
+												{def.head}
+											</TableHead>
+										);
+									})}
+								</TableRow>
+							</TableHeader>
+							<TableBody>
+								{loading &&
+									Array.from({ length: 8 }).map((_, i) => (
+										<TableRow key={i}>
+											<TableCell><Skeleton className="h-4 w-8" /></TableCell>
+											{visibleCols.map((col) => (
+												<React.Fragment key={col.key}>
+													{colDefs[col.key]?.skeleton}
+												</React.Fragment>
+											))}
+										</TableRow>
+									))}
+								{!loading && sortedList.length === 0 && (
+									<TableRow>
+										<TableCell colSpan={colCount} className="text-center text-muted-foreground py-8">
+											Δεν βρέθηκαν κρατήσεις
+										</TableCell>
 									</TableRow>
-								))}
-						</TableBody>
-					</Table>
+								)}
+								{!loading &&
+									paginatedList.map((b) => (
+										<TableRow
+											key={b.id}
+											className="cursor-pointer hover:bg-muted/50"
+											onClick={() => router.push(`/bookings/${b.id}`)}
+										>
+											<TableCell className="font-mono text-sm">{b.id}</TableCell>
+											{visibleCols.map((col) => (
+												<React.Fragment key={col.key}>
+													{colDefs[col.key]?.cell(b)}
+												</React.Fragment>
+											))}
+										</TableRow>
+									))}
+							</TableBody>
+						</Table>
 					</div>
 				</div>
 
@@ -720,11 +755,10 @@ export default function BookingsClient({
 												setBookingSource(opt);
 												if (opt === "own") setProviderId("all");
 											}}
-											className={`flex-1 py-1 text-xs font-medium transition-colors ${
-												bookingSource === opt
-													? "bg-[#f9cf44] text-[#333333]"
-													: "text-[#f9cf44] hover:bg-[#f9cf44]/20"
-											}`}
+											className={`flex-1 py-1 text-xs font-medium transition-colors ${bookingSource === opt
+												? "bg-[#f9cf44] text-[#333333]"
+												: "text-[#f9cf44] hover:bg-[#f9cf44]/20"
+												}`}
 										>
 											{labels[opt]}
 										</button>
@@ -768,11 +802,10 @@ export default function BookingsClient({
 										setAssignmentTab("driver");
 										setPartnerId("all");
 									}}
-									className={`flex-1 py-1 text-xs font-medium transition-colors ${
-										assignmentTab === "driver"
-											? "bg-[#f9cf44] text-[#333333]"
-											: "text-[#f9cf44] hover:bg-[#f9cf44]/20"
-									}`}
+									className={`flex-1 py-1 text-xs font-medium transition-colors ${assignmentTab === "driver"
+										? "bg-[#f9cf44] text-[#333333]"
+										: "text-[#f9cf44] hover:bg-[#f9cf44]/20"
+										}`}
 								>
 									Οδηγός
 								</button>
@@ -783,11 +816,10 @@ export default function BookingsClient({
 										setDriverId("all");
 										setVehicleId("all");
 									}}
-									className={`flex-1 py-1 text-xs font-medium transition-colors ${
-										assignmentTab === "partner"
-											? "bg-[#f9cf44] text-[#333333]"
-											: "text-[#f9cf44] hover:bg-[#f9cf44]/20"
-									}`}
+									className={`flex-1 py-1 text-xs font-medium transition-colors ${assignmentTab === "partner"
+										? "bg-[#f9cf44] text-[#333333]"
+										: "text-[#f9cf44] hover:bg-[#f9cf44]/20"
+										}`}
 								>
 									Συνεργάτης
 								</button>
@@ -807,7 +839,7 @@ export default function BookingsClient({
 														v === "all"
 															? "Όλοι"
 															: (drivers.find((d) => String(d.id) === v)
-																	?.fullName ?? v)
+																?.fullName ?? v)
 													}
 												</SelectValue>
 											</SelectTrigger>
@@ -833,7 +865,7 @@ export default function BookingsClient({
 														v === "all"
 															? "Όλα"
 															: (vehicles.find((vh) => String(vh.id) === v)
-																	?.name ?? v)
+																?.name ?? v)
 													}
 												</SelectValue>
 											</SelectTrigger>
