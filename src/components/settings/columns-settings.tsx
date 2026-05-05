@@ -27,24 +27,31 @@ function serialize(cols: Column[]) {
 export default function ColumnsSettings() {
 	const [bookingCols, setBookingCols] = useState<Column[]>(() => loadBookingColumns());
 	const [driverCols, setDriverCols] = useState<Column[]>(() => loadDriverColumns());
+	const [vehicleCols, setVehicleCols] = useState<Column[]>(() => loadVehicleColumns());
 
 	const [savedBooking, setSavedBooking] = useState(() => serialize(loadBookingColumns()));
 	const [savedDriver, setSavedDriver] = useState(() => serialize(loadDriverColumns()));
+	const [savedVehicle, setSavedVehicle] = useState(() => serialize(loadVehicleColumns()));
 
 	const isDirty =
-		serialize(bookingCols) !== savedBooking || serialize(driverCols) !== savedDriver;
+		serialize(bookingCols) !== savedBooking ||
+		serialize(driverCols) !== savedDriver ||
+		serialize(vehicleCols) !== savedVehicle;
 
 	function handleSave() {
 		saveBookingColumns(bookingCols);
 		saveDriverColumns(driverCols);
+		saveVehicleColumns(vehicleCols);
 		setSavedBooking(serialize(bookingCols));
 		setSavedDriver(serialize(driverCols));
+		setSavedVehicle(serialize(vehicleCols));
 		toast.success("Ρυθμίσεις αποθηκεύτηκαν");
 	}
 
 	function handleReset() {
 		setBookingCols(DEFAULT_BOOKING_COLUMNS);
 		setDriverCols(DEFAULT_DRIVER_COLUMNS);
+		setVehicleCols(DEFAULT_VEHICLE_COLUMNS);
 	}
 
 	return (
@@ -77,6 +84,15 @@ export default function ColumnsSettings() {
 						description="Σύρετε για αλλαγή σειράς · Checkbox για ορατότητα"
 						columns={driverCols}
 						onChange={setDriverCols}
+					/>
+				</div>
+
+				<div className="bg-white rounded-md border border-t-4 border-t-[#f9cf44] p-6 w-72">
+					<ColumnPanel
+						title="Κολώνες Οχημάτων"
+						description="Σύρετε για αλλαγή σειράς · Checkbox για ορατότητα"
+						columns={vehicleCols}
+						onChange={setVehicleCols}
 					/>
 				</div>
 			</div>

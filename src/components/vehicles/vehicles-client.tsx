@@ -1,7 +1,8 @@
 "use client";
 
+import React from "react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FaSort, FaSortDown, FaSortUp, FaSlidersH, FaTimes } from "react-icons/fa";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +27,11 @@ import {
 } from "@/components/ui/table";
 import Navigation from "../ui/navigation";
 import { type Vehicle } from "./vehicle-sheet";
+import {
+	DEFAULT_VEHICLE_COLUMNS,
+	loadVehicleColumns,
+	type VehicleColumn,
+} from "@/lib/vehicle-columns";
 
 const vehicleTypeLabels: Record<string, string> = {
 	car: "Επιβατικό",
@@ -69,6 +75,9 @@ export default function VehiclesClient({
 	const [searchPlate, setSearchPlate] = useState("");
 	const [typeFilter, setTypeFilter] = useState<"all" | "car" | "van" | "bus">("all");
 	const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+	const [columnConfig, setColumnConfig] = useState<VehicleColumn[]>(DEFAULT_VEHICLE_COLUMNS);
+
+	useEffect(() => { setColumnConfig(loadVehicleColumns()); }, []);
 
 	const [applied, setApplied] = useState({
 		name: "",
@@ -155,6 +164,44 @@ export default function VehiclesClient({
 		});
 	}, [initialVehicles, applied, sortCol, sortDir]);
 
+	const visibleCols = columnConfig.filter((c) => c.visible);
+
+	const colDefs: Record<string, {
+		head: React.ReactNode;
+		cell: (v: Vehicle) => React.ReactNode;
+	}> = {
+		name: {
+			head: <div className="flex items-center gap-1">Όνομα<SortIcon col="name" sortCol={sortCol} sortDir={sortDir} /></div>,
+			cell: (v) => <TableCell key="name" className="font-medium">{v.name}</TableCell>,
+		},
+		plate: {
+			head: <div className="flex items-center gap-1">Πινακίδα<SortIcon col="plate" sortCol={sortCol} sortDir={sortDir} /></div>,
+			cell: (v) => <TableCell key="plate">{v.plate}</TableCell>,
+		},
+		type: {
+			head: <div className="flex items-center gap-1">Τύπος<SortIcon col="type" sortCol={sortCol} sortDir={sortDir} /></div>,
+			cell: (v) => (
+				<TableCell key="type">
+					<Badge variant="outline">{vehicleTypeLabels[v.type] ?? v.type}</Badge>
+				</TableCell>
+			),
+		},
+		brand: {
+			head: <div className="flex items-center gap-1">Μάρκα<SortIcon col="brand" sortCol={sortCol} sortDir={sortDir} /></div>,
+			cell: (v) => <TableCell key="brand">{v.brand ?? "—"}</TableCell>,
+		},
+		active: {
+			head: <div className="flex items-center gap-1">Κατάσταση<SortIcon col="active" sortCol={sortCol} sortDir={sortDir} /></div>,
+			cell: (v) => (
+				<TableCell key="active">
+					{v.active ? <Badge variant="default">Ενεργό</Badge> : <Badge variant="secondary">Ανενεργό</Badge>}
+				</TableCell>
+			),
+		},
+	};
+
+	const sortableKeys = new Set(["name", "plate", "type", "brand", "active"]);
+
 	const totalPages = Math.max(1, Math.ceil(filteredAndSorted.length / pageSize));
 	const paginatedVehicles = filteredAndSorted.slice(
 		(page - 1) * pageSize,
@@ -198,58 +245,22 @@ export default function VehiclesClient({
 										</div>
 									</div>
 								</TableHead>
-								<TableHead
-									className="font-extrabold cursor-pointer select-none"
-									onClick={() => handleSort("name")}
-								>
-									<div className="flex items-center gap-1">
-										Όνομα
-										<SortIcon col="name" sortCol={sortCol} sortDir={sortDir} />
-									</div>
-								</TableHead>
-								<TableHead
-									className="font-extrabold cursor-pointer select-none"
-									onClick={() => handleSort("plate")}
-								>
-									<div className="flex items-center gap-1">
-										Πινακίδα
-										<SortIcon col="plate" sortCol={sortCol} sortDir={sortDir} />
-									</div>
-								</TableHead>
-								<TableHead
-									className="font-extrabold cursor-pointer select-none"
-									onClick={() => handleSort("type")}
-								>
-									<div className="flex items-center gap-1">
-										Τύπος
-										<SortIcon col="type" sortCol={sortCol} sortDir={sortDir} />
-									</div>
-								</TableHead>
-								<TableHead
-									className="font-extrabold cursor-pointer select-none"
-									onClick={() => handleSort("brand")}
-								>
-									<div className="flex items-center gap-1">
-										Μάρκα
-										<SortIcon col="brand" sortCol={sortCol} sortDir={sortDir} />
-									</div>
-								</TableHead>
-								<TableHead
-									className="font-extrabold cursor-pointer select-none"
-									onClick={() => handleSort("active")}
-								>
-									<div className="flex items-center gap-1">
-										Κατάσταση
-										<SortIcon col="active" sortCol={sortCol} sortDir={sortDir} />
-									</div>
-								</TableHead>
+								{visibleCols.map((col) => (
+									<TableHead
+										key={col.key}
+										className={`font-extrabold${sortableKeys.has(col.key) ? " cursor-pointer select-none" : ""}`}
+										onClick={sortableKeys.has(col.key) ? () => handleSort(col.key) : undefined}
+									>
+										{colDefs[col.key]?.head}
+									</TableHead>
+								))}
 							</TableRow>
 						</TableHeader>
 						<TableBody>
 							{filteredAndSorted.length === 0 && (
 								<TableRow>
 									<TableCell
-										colSpan={6}
+										colSpan={1 + visibleCols.length}
 										className="text-center text-muted-foreground py-8"
 									>
 										Δεν βρέθηκαν οχήματα
@@ -263,21 +274,11 @@ export default function VehiclesClient({
 									onClick={() => router.push(`/vehicles/${vehicle.id}`)}
 								>
 									<TableCell className="font-mono text-sm">{vehicle.id}</TableCell>
-									<TableCell className="font-medium">{vehicle.name}</TableCell>
-									<TableCell>{vehicle.plate}</TableCell>
-									<TableCell>
-										<Badge variant="outline">
-											{vehicleTypeLabels[vehicle.type] ?? vehicle.type}
-										</Badge>
-									</TableCell>
-									<TableCell>{vehicle.brand ?? "—"}</TableCell>
-									<TableCell>
-										{vehicle.active ? (
-											<Badge variant="default">Ενεργό</Badge>
-										) : (
-											<Badge variant="secondary">Ανενεργό</Badge>
-										)}
-									</TableCell>
+									{visibleCols.map((col) => (
+										<React.Fragment key={col.key}>
+											{colDefs[col.key]?.cell(vehicle)}
+										</React.Fragment>
+									))}
 								</TableRow>
 							))}
 						</TableBody>
