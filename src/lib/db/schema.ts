@@ -165,8 +165,8 @@ export const bookings = pgTable(
 		dropoffLocation: text("dropoff_location").notNull(),
 		passengerCount: integer("passenger_count").notNull().default(1),
 		vehicleType: vehicleTypeEnum("vehicle_type").notNull(),
-		babySeat: boolean("baby_seat").default(false),
-		boosterSeat: boolean("booster_seat").default(false),
+		babySeat: integer("baby_seat").default(0),
+		boosterSeat: integer("booster_seat").default(0),
 
 		// Customer
 		customerName: varchar("customer_name", { length: 200 }).notNull(),

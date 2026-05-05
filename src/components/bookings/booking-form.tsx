@@ -120,8 +120,8 @@ export default function BookingForm({
 		String(booking?.passengerCount ?? 1),
 	);
 	const [vehicleType, setVehicleType] = useState(booking?.vehicleType ?? "car");
-	const [babySeat, setBabySeat] = useState(booking?.babySeat ?? false);
-	const [boosterSeat, setBoosterSeat] = useState(booking?.boosterSeat ?? false);
+	const [babySeat, setBabySeat] = useState<number>(booking?.babySeat ?? 0);
+	const [boosterSeat, setBoosterSeat] = useState<number>(booking?.boosterSeat ?? 0);
 	const [customerName, setCustomerName] = useState(booking?.customerName ?? "");
 	const [customerPhone, setCustomerPhone] = useState(
 		booking?.customerPhone ?? "",
@@ -652,28 +652,40 @@ export default function BookingForm({
 									)}
 								</div>
 
-									<div className="flex gap-6 items-center col-span-2">
-										<div className="flex items-center gap-2">
-											<input
-												id="babySeat"
-												type="checkbox"
-												checked={babySeat}
-												onChange={(e) => setBabySeat(e.target.checked)}
+									<div className="flex gap-6 items-end col-span-2">
+										<div className="space-y-2">
+											<Label>Baby Seat</Label>
+											<Select
+												value={String(babySeat)}
+												onValueChange={(v) => setBabySeat(v ? parseInt(v, 10) : 0)}
 												disabled={loading}
-												className="h-4 w-4"
-											/>
-											<Label htmlFor="babySeat">Baby Seat</Label>
+											>
+												<SelectTrigger className="w-24">
+													<SelectValue />
+												</SelectTrigger>
+												<SelectContent>
+													{[0, 1, 2, 3, 4].map((n) => (
+														<SelectItem key={n} value={String(n)}>{n}</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
 										</div>
-										<div className="flex items-center gap-2">
-											<input
-												id="boosterSeat"
-												type="checkbox"
-												checked={boosterSeat}
-												onChange={(e) => setBoosterSeat(e.target.checked)}
+										<div className="space-y-2">
+											<Label>Booster Seat</Label>
+											<Select
+												value={String(boosterSeat)}
+												onValueChange={(v) => setBoosterSeat(v ? parseInt(v, 10) : 0)}
 												disabled={loading}
-												className="h-4 w-4"
-											/>
-											<Label htmlFor="boosterSeat">Booster Seat</Label>
+											>
+												<SelectTrigger className="w-24">
+													<SelectValue />
+												</SelectTrigger>
+												<SelectContent>
+													{[0, 1, 2, 3, 4].map((n) => (
+														<SelectItem key={n} value={String(n)}>{n}</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
 										</div>
 									</div>
 								</CardContent>

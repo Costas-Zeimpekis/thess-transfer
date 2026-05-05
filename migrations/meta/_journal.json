@@ -29,6 +29,20 @@
       "when": 1776243146307,
       "tag": "0003_safe_mojo",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1777962875281,
+      "tag": "0004_abandoned_skaar",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1777963365074,
+      "tag": "0005_redundant_gabe_jones",
+      "breakpoints": true
     }
   ]
 }

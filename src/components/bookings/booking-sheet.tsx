@@ -35,8 +35,8 @@ export type BookingFormData = {
 	dropoffLocation: string;
 	passengerCount: number;
 	vehicleType: string;
-	babySeat: boolean | null;
-	boosterSeat: boolean | null;
+	babySeat: number | null;
+	boosterSeat: number | null;
 	customerName: string;
 	customerPhone: string | null;
 	customerEmail: string | null;
@@ -68,8 +68,8 @@ const EMPTY_FORM = {
 	dropoffLocation: "",
 	passengerCount: "1",
 	vehicleType: "car",
-	babySeat: false,
-	boosterSeat: false,
+	babySeat: 0,
+	boosterSeat: 0,
 	customerName: "",
 	customerPhone: "",
 	customerEmail: "",
@@ -96,8 +96,8 @@ export default function BookingSheet({
 	const [dropoffLocation, setDropoffLocation] = useState("");
 	const [passengerCount, setPassengerCount] = useState("1");
 	const [vehicleType, setVehicleType] = useState("car");
-	const [babySeat, setBabySeat] = useState(false);
-	const [boosterSeat, setBoosterSeat] = useState(false);
+	const [babySeat, setBabySeat] = useState<number>(0);
+	const [boosterSeat, setBoosterSeat] = useState<number>(0);
 	const [customerName, setCustomerName] = useState("");
 	const [customerPhone, setCustomerPhone] = useState("");
 	const [customerEmail, setCustomerEmail] = useState("");
@@ -122,8 +122,8 @@ export default function BookingSheet({
 			setDropoffLocation(booking.dropoffLocation);
 			setPassengerCount(String(booking.passengerCount));
 			setVehicleType(booking.vehicleType);
-			setBabySeat(booking.babySeat ?? false);
-			setBoosterSeat(booking.boosterSeat ?? false);
+			setBabySeat(booking.babySeat ?? 0);
+			setBoosterSeat(booking.boosterSeat ?? 0);
 			setCustomerName(booking.customerName);
 			setCustomerPhone(booking.customerPhone ?? "");
 			setCustomerEmail(booking.customerEmail ?? "");
@@ -332,27 +332,39 @@ export default function BookingSheet({
 					</div>
 
 					<div className="flex gap-6">
-						<div className="flex items-center gap-2">
-							<input
-								id="babySeat"
-								type="checkbox"
-								checked={babySeat}
-								onChange={(e) => setBabySeat(e.target.checked)}
+						<div className="space-y-2">
+							<Label>Baby Seat</Label>
+							<Select
+								value={String(babySeat)}
+								onValueChange={(v) => setBabySeat(v ? parseInt(v, 10) : 0)}
 								disabled={loading}
-								className="h-4 w-4"
-							/>
-							<Label htmlFor="babySeat">Baby Seat</Label>
+							>
+								<SelectTrigger className="w-24">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									{[0, 1, 2, 3, 4].map((n) => (
+										<SelectItem key={n} value={String(n)}>{n}</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
 						</div>
-						<div className="flex items-center gap-2">
-							<input
-								id="boosterSeat"
-								type="checkbox"
-								checked={boosterSeat}
-								onChange={(e) => setBoosterSeat(e.target.checked)}
+						<div className="space-y-2">
+							<Label>Booster Seat</Label>
+							<Select
+								value={String(boosterSeat)}
+								onValueChange={(v) => setBoosterSeat(v ? parseInt(v, 10) : 0)}
 								disabled={loading}
-								className="h-4 w-4"
-							/>
-							<Label htmlFor="boosterSeat">Booster Seat</Label>
+							>
+								<SelectTrigger className="w-24">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									{[0, 1, 2, 3, 4].map((n) => (
+										<SelectItem key={n} value={String(n)}>{n}</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
 						</div>
 					</div>
 
