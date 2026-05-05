@@ -17,6 +17,8 @@ export default function DriverForm({ id }: DriverFormProps) {
 
   const [fullName, setFullName] = useState('')
   const [idCard, setIdCard] = useState('')
+  const [driversLicense, setDriversLicense] = useState('')
+  const [taxId, setTaxId] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [active, setActive] = useState(true)
@@ -51,6 +53,8 @@ export default function DriverForm({ id }: DriverFormProps) {
         const driver = await res.json()
         setFullName(driver.fullName ?? '')
         setIdCard(driver.idCard ?? '')
+        setDriversLicense(driver.driversLicense ?? '')
+        setTaxId(driver.taxId ?? '')
         setPhone(driver.phone ?? '')
         setEmail(driver.email ?? '')
         setActive(driver.active ?? true)
@@ -77,6 +81,8 @@ export default function DriverForm({ id }: DriverFormProps) {
         body: JSON.stringify({
           full_name: fullName,
           id_card: idCard || null,
+          drivers_license: driversLicense || null,
+          tax_id: taxId || null,
           phone: phone || null,
           email: email || null,
           ...(isEdit && { active }),
@@ -129,6 +135,26 @@ export default function DriverForm({ id }: DriverFormProps) {
             disabled={loading}
           />
           {fieldErrors.fullName && <p className="text-xs text-red-500">{fieldErrors.fullName}</p>}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="driversLicense">Δίπλωμα Οδήγησης</Label>
+          <Input
+            id="driversLicense"
+            value={driversLicense}
+            onChange={(e) => setDriversLicense(e.target.value)}
+            disabled={loading}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="taxId">ΑΦΜ</Label>
+          <Input
+            id="taxId"
+            value={taxId}
+            onChange={(e) => setTaxId(e.target.value)}
+            disabled={loading}
+          />
         </div>
 
         <div className="space-y-2">

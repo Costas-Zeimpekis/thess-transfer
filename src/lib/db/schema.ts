@@ -109,6 +109,8 @@ export const drivers = pgTable("drivers", {
 	id: serial("id").primaryKey(),
 	fullName: varchar("full_name", { length: 200 }).notNull(),
 	idCard: varchar("id_card", { length: 50 }),
+	driversLicense: varchar("drivers_license", { length: 100 }),
+	taxId: varchar("tax_id", { length: 50 }),
 	phone: varchar("phone", { length: 50 }),
 	email: varchar("email", { length: 200 }),
 	googleCalendarId: varchar("google_calendar_id", { length: 200 }),

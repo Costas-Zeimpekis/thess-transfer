@@ -1,7 +1,8 @@
 "use client";
 
+import React from "react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FaSort, FaSortDown, FaSortUp, FaSlidersH, FaTimes } from "react-icons/fa";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +20,11 @@ import {
 } from "@/components/ui/table";
 import Navigation from "../ui/navigation";
 import { type Driver } from "./driver-sheet";
+import {
+	DEFAULT_DRIVER_COLUMNS,
+	loadDriverColumns,
+	type DriverColumn,
+} from "@/lib/driver-columns";
 
 type DriversClientProps = {
 	drivers: Driver[];
@@ -56,6 +62,9 @@ export default function DriversClient({
 	const [searchEmail, setSearchEmail] = useState("");
 	const [searchPhone, setSearchPhone] = useState("");
 	const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+	const [columnConfig, setColumnConfig] = useState<DriverColumn[]>(DEFAULT_DRIVER_COLUMNS);
+
+	useEffect(() => { setColumnConfig(loadDriverColumns()); }, []);
 
 	const [applied, setApplied] = useState({
 		name: "",
@@ -140,6 +149,44 @@ export default function DriversClient({
 		});
 	}, [initialDrivers, applied, sortCol, sortDir]);
 
+	const visibleCols = columnConfig.filter((c) => c.visible);
+
+	const colDefs: Record<string, {
+		head: React.ReactNode;
+		cell: (d: Driver) => React.ReactNode;
+	}> = {
+		fullName: {
+			head: <div className="flex items-center gap-1">Ονοματεπώνυμο<SortIcon col="fullName" sortCol={sortCol} sortDir={sortDir} /></div>,
+			cell: (d) => <TableCell key="fullName" className="font-medium">{d.fullName}</TableCell>,
+		},
+		driversLicense: {
+			head: "Δίπλωμα Οδήγησης",
+			cell: (d) => <TableCell key="driversLicense">{d.driversLicense ?? "—"}</TableCell>,
+		},
+		taxId: {
+			head: "ΑΦΜ",
+			cell: (d) => <TableCell key="taxId">{d.taxId ?? "—"}</TableCell>,
+		},
+		phone: {
+			head: <div className="flex items-center gap-1">Τηλέφωνο<SortIcon col="phone" sortCol={sortCol} sortDir={sortDir} /></div>,
+			cell: (d) => <TableCell key="phone">{d.phone ?? "—"}</TableCell>,
+		},
+		email: {
+			head: <div className="flex items-center gap-1">Email<SortIcon col="email" sortCol={sortCol} sortDir={sortDir} /></div>,
+			cell: (d) => <TableCell key="email">{d.email ?? "—"}</TableCell>,
+		},
+		active: {
+			head: <div className="flex items-center gap-1">Κατάσταση<SortIcon col="active" sortCol={sortCol} sortDir={sortDir} /></div>,
+			cell: (d) => (
+				<TableCell key="active">
+					{d.active ? <Badge variant="default">Ενεργός</Badge> : <Badge variant="secondary">Ανενεργός</Badge>}
+				</TableCell>
+			),
+		},
+	};
+
+	const sortableKeys = new Set(["fullName", "phone", "email", "active"]);
+
 	const totalPages = Math.max(1, Math.ceil(filteredAndSorted.length / pageSize));
 	const paginatedDrivers = filteredAndSorted.slice(
 		(page - 1) * pageSize,
@@ -170,7 +217,7 @@ export default function DriversClient({
 						<TableHeader className="sticky top-0 z-10 [&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-muted">
 							<TableRow className="bg-muted">
 								<TableHead
-									className="font-extrabold  overflow-hidden p-0 cursor-pointer select-none w-[22px]"
+									className="font-extrabold overflow-hidden p-0 cursor-pointer select-none w-5.5"
 									onClick={() => handleSort("id")}
 								>
 									<div
@@ -183,49 +230,22 @@ export default function DriversClient({
 										</div>
 									</div>
 								</TableHead>
-								<TableHead
-									className="font-extrabold cursor-pointer select-none"
-									onClick={() => handleSort("fullName")}
-								>
-									<div className="flex items-center gap-1">
-										Ονοματεπώνυμο
-										<SortIcon col="fullName" sortCol={sortCol} sortDir={sortDir} />
-									</div>
-								</TableHead>
-								<TableHead
-									className="font-extrabold cursor-pointer select-none"
-									onClick={() => handleSort("phone")}
-								>
-									<div className="flex items-center gap-1">
-										Τηλέφωνο
-										<SortIcon col="phone" sortCol={sortCol} sortDir={sortDir} />
-									</div>
-								</TableHead>
-								<TableHead
-									className="font-extrabold cursor-pointer select-none"
-									onClick={() => handleSort("email")}
-								>
-									<div className="flex items-center gap-1">
-										Email
-										<SortIcon col="email" sortCol={sortCol} sortDir={sortDir} />
-									</div>
-								</TableHead>
-								<TableHead
-									className="font-extrabold cursor-pointer select-none"
-									onClick={() => handleSort("active")}
-								>
-									<div className="flex items-center gap-1">
-										Κατάσταση
-										<SortIcon col="active" sortCol={sortCol} sortDir={sortDir} />
-									</div>
-								</TableHead>
+								{visibleCols.map((col) => (
+									<TableHead
+										key={col.key}
+										className={`font-extrabold${sortableKeys.has(col.key) ? " cursor-pointer select-none" : ""}`}
+										onClick={sortableKeys.has(col.key) ? () => handleSort(col.key) : undefined}
+									>
+										{colDefs[col.key]?.head}
+									</TableHead>
+								))}
 							</TableRow>
 						</TableHeader>
 						<TableBody>
 							{filteredAndSorted.length === 0 && (
 								<TableRow>
 									<TableCell
-										colSpan={5}
+										colSpan={1 + visibleCols.length}
 										className="text-center text-muted-foreground py-8"
 									>
 										Δεν βρέθηκαν οδηγοί
@@ -239,16 +259,11 @@ export default function DriversClient({
 									onClick={() => router.push(`/drivers/${driver.id}`)}
 								>
 									<TableCell className="font-mono text-sm">{driver.id}</TableCell>
-        							<TableCell className="font-medium">{driver.fullName}</TableCell>
-									<TableCell>{driver.phone ?? "—"}</TableCell>
-									<TableCell>{driver.email ?? "—"}</TableCell>
-									<TableCell>
-										{driver.active ? (
-											<Badge variant="default">Ενεργός</Badge>
-										) : (
-											<Badge variant="secondary">Ανενεργός</Badge>
-										)}
-									</TableCell>
+									{visibleCols.map((col) => (
+										<React.Fragment key={col.key}>
+											{colDefs[col.key]?.cell(driver)}
+										</React.Fragment>
+									))}
 								</TableRow>
 							))}
 						</TableBody>

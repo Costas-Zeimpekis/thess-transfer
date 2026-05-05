@@ -32,7 +32,7 @@ export async function PUT(request: Request, { params }: Params) {
 
   const { id } = await params
   const body = await request.json()
-  const { full_name, id_card, phone, email, active } = body
+  const { full_name, id_card, drivers_license, tax_id, phone, email, active } = body
 
   if (!full_name) {
     return NextResponse.json({ error: 'Το ονοματεπώνυμο είναι υποχρεωτικό' }, { status: 400 })
@@ -43,6 +43,8 @@ export async function PUT(request: Request, { params }: Params) {
     .set({
       fullName: full_name,
       idCard: id_card ?? null,
+      driversLicense: drivers_license ?? null,
+      taxId: tax_id ?? null,
       phone: phone ?? null,
       email: email ?? null,
       active: active ?? true,

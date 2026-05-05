@@ -43,6 +43,13 @@
       "when": 1777963365074,
       "tag": "0005_redundant_gabe_jones",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1777964518279,
+      "tag": "0006_brave_medusa",
+      "breakpoints": true
     }
   ]
 }

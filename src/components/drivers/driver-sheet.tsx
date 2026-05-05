@@ -16,6 +16,8 @@ export type Driver = {
   id: number
   fullName: string
   idCard: string | null
+  driversLicense: string | null
+  taxId: string | null
   phone: string | null
   email: string | null
   active: boolean | null

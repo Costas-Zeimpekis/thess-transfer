@@ -27,7 +27,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json()
-  const { full_name, id_card, phone, email } = body
+  const { full_name, id_card, drivers_license, tax_id, phone, email } = body
 
   if (!full_name) {
     return NextResponse.json({ error: 'Το ονοματεπώνυμο είναι υποχρεωτικό' }, { status: 400 })
@@ -38,6 +38,8 @@ export async function POST(request: Request) {
     .values({
       fullName: full_name,
       idCard: id_card ?? null,
+      driversLicense: drivers_license ?? null,
+      taxId: tax_id ?? null,
       phone: phone ?? null,
       email: email ?? null,
       active: true,
