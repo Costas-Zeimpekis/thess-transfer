@@ -139,6 +139,7 @@ export const vehicles = pgTable("vehicles", {
 export const partners = pgTable("partners", {
 	id: serial("id").primaryKey(),
 	name: varchar("name", { length: 200 }).notNull(),
+	taxId: varchar("tax_id", { length: 50 }),
 	email: varchar("email", { length: 200 }),
 	phone: varchar("phone", { length: 50 }),
 	contactInfo: text("contact_info"),

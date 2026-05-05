@@ -1,7 +1,8 @@
 "use client";
 
+import React from "react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FaSort, FaSortDown, FaSortUp, FaSlidersH, FaTimes } from "react-icons/fa";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -18,6 +19,11 @@ import {
 } from "@/components/ui/table";
 import Navigation from "../ui/navigation";
 import { type Partner } from "./partner-sheet";
+import {
+	DEFAULT_PARTNER_COLUMNS,
+	loadPartnerColumns,
+	type PartnerColumn,
+} from "@/lib/partner-columns";
 
 type PartnersClientProps = {
 	partners: Partner[];
@@ -56,6 +62,9 @@ export default function PartnersClient({
 	const [searchPhone, setSearchPhone] = useState("");
 
 	const [applied, setApplied] = useState({ name: "", email: "", phone: "" });
+	const [columnConfig, setColumnConfig] = useState<PartnerColumn[]>(DEFAULT_PARTNER_COLUMNS);
+
+	useEffect(() => { setColumnConfig(loadPartnerColumns()); }, []);
 
 	function handleApply() {
 		setPage(1);
@@ -124,6 +133,36 @@ export default function PartnersClient({
 		});
 	}, [initialPartners, applied, sortCol, sortDir]);
 
+	const visibleCols = columnConfig.filter((c) => c.visible);
+
+	const colDefs: Record<string, {
+		head: React.ReactNode;
+		cell: (p: Partner) => React.ReactNode;
+	}> = {
+		name: {
+			head: <div className="flex items-center gap-1">Επωνυμία<SortIcon col="name" sortCol={sortCol} sortDir={sortDir} /></div>,
+			cell: (p) => <TableCell key="name" className="font-medium">{p.name}</TableCell>,
+		},
+		taxId: {
+			head: "ΑΦΜ",
+			cell: (p) => <TableCell key="taxId">{p.taxId ?? "—"}</TableCell>,
+		},
+		email: {
+			head: <div className="flex items-center gap-1">Email<SortIcon col="email" sortCol={sortCol} sortDir={sortDir} /></div>,
+			cell: (p) => <TableCell key="email">{p.email ?? "—"}</TableCell>,
+		},
+		phone: {
+			head: <div className="flex items-center gap-1">Τηλέφωνο<SortIcon col="phone" sortCol={sortCol} sortDir={sortDir} /></div>,
+			cell: (p) => <TableCell key="phone">{p.phone ?? "—"}</TableCell>,
+		},
+		contactInfo: {
+			head: "Στοιχεία Επικοινωνίας",
+			cell: (p) => <TableCell key="contactInfo">{p.contactInfo ?? "—"}</TableCell>,
+		},
+	};
+
+	const sortableKeys = new Set(["name", "email", "phone"]);
+
 	const totalPages = Math.max(1, Math.ceil(filteredAndSorted.length / pageSize));
 	const paginatedPartners = filteredAndSorted.slice(
 		(page - 1) * pageSize,
@@ -166,40 +205,22 @@ export default function PartnersClient({
 										</div>
 									</div>
 								</TableHead>
-								<TableHead
-									className="font-extrabold cursor-pointer select-none"
-									onClick={() => handleSort("name")}
-								>
-									<div className="flex items-center gap-1">
-										Επωνυμία
-										<SortIcon col="name" sortCol={sortCol} sortDir={sortDir} />
-									</div>
-								</TableHead>
-								<TableHead
-									className="font-extrabold cursor-pointer select-none"
-									onClick={() => handleSort("email")}
-								>
-									<div className="flex items-center gap-1">
-										Email
-										<SortIcon col="email" sortCol={sortCol} sortDir={sortDir} />
-									</div>
-								</TableHead>
-								<TableHead
-									className="font-extrabold cursor-pointer select-none"
-									onClick={() => handleSort("phone")}
-								>
-									<div className="flex items-center gap-1">
-										Τηλέφωνο
-										<SortIcon col="phone" sortCol={sortCol} sortDir={sortDir} />
-									</div>
-								</TableHead>
+								{visibleCols.map((col) => (
+									<TableHead
+										key={col.key}
+										className={`font-extrabold${sortableKeys.has(col.key) ? " cursor-pointer select-none" : ""}`}
+										onClick={sortableKeys.has(col.key) ? () => handleSort(col.key) : undefined}
+									>
+										{colDefs[col.key]?.head}
+									</TableHead>
+								))}
 							</TableRow>
 						</TableHeader>
 						<TableBody>
 							{filteredAndSorted.length === 0 && (
 								<TableRow>
 									<TableCell
-										colSpan={4}
+										colSpan={1 + visibleCols.length}
 										className="text-center text-muted-foreground py-8"
 									>
 										Δεν βρέθηκαν συνεργάτες
@@ -213,9 +234,11 @@ export default function PartnersClient({
 									onClick={() => router.push(`/partners/${partner.id}`)}
 								>
 									<TableCell className="font-mono text-sm">{partner.id}</TableCell>
-									<TableCell className="font-medium">{partner.name}</TableCell>
-									<TableCell>{partner.email ?? "—"}</TableCell>
-									<TableCell>{partner.phone ?? "—"}</TableCell>
+									{visibleCols.map((col) => (
+										<React.Fragment key={col.key}>
+											{colDefs[col.key]?.cell(partner)}
+										</React.Fragment>
+									))}
 								</TableRow>
 							))}
 						</TableBody>

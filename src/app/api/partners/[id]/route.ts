@@ -32,7 +32,7 @@ export async function PUT(request: Request, { params }: Params) {
 
   const { id } = await params
   const body = await request.json()
-  const { name, email, phone, contact_info } = body
+  const { name, tax_id, email, phone, contact_info } = body
 
   if (!name) {
     return NextResponse.json({ error: 'Η επωνυμία είναι υποχρεωτική' }, { status: 400 })
@@ -42,6 +42,7 @@ export async function PUT(request: Request, { params }: Params) {
     .update(partners)
     .set({
       name,
+      taxId: tax_id ?? null,
       email: email ?? null,
       phone: phone ?? null,
       contactInfo: contact_info ?? null,

@@ -50,6 +50,13 @@
       "when": 1777964518279,
       "tag": "0006_brave_medusa",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1777965770819,
+      "tag": "0007_overjoyed_tyrannus",
+      "breakpoints": true
     }
   ]
 }

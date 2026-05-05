@@ -27,7 +27,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json()
-  const { name, email, phone, contact_info } = body
+  const { name, tax_id, email, phone, contact_info } = body
 
   if (!name) {
     return NextResponse.json({ error: 'Η επωνυμία είναι υποχρεωτική' }, { status: 400 })
@@ -37,6 +37,7 @@ export async function POST(request: Request) {
     .insert(partners)
     .values({
       name,
+      taxId: tax_id ?? null,
       email: email ?? null,
       phone: phone ?? null,
       contactInfo: contact_info ?? null,

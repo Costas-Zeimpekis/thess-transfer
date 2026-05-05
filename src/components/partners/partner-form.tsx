@@ -17,6 +17,7 @@ export default function PartnerForm({ id }: PartnerFormProps) {
   const isEdit = !!id
 
   const [name, setName] = useState('')
+  const [taxId, setTaxId] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [contactInfo, setContactInfo] = useState('')
@@ -50,6 +51,7 @@ export default function PartnerForm({ id }: PartnerFormProps) {
         }
         const partner = await res.json()
         setName(partner.name ?? '')
+        setTaxId(partner.taxId ?? '')
         setEmail(partner.email ?? '')
         setPhone(partner.phone ?? '')
         setContactInfo(partner.contactInfo ?? '')
@@ -75,6 +77,7 @@ export default function PartnerForm({ id }: PartnerFormProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name,
+          tax_id: taxId || null,
           email: email || null,
           phone: phone || null,
           contact_info: contactInfo || null,
@@ -127,6 +130,16 @@ export default function PartnerForm({ id }: PartnerFormProps) {
             disabled={loading}
           />
           {fieldErrors.name && <p className="text-xs text-red-500">{fieldErrors.name}</p>}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="taxId">ΑΦΜ</Label>
+          <Input
+            id="taxId"
+            value={taxId}
+            onChange={(e) => setTaxId(e.target.value)}
+            disabled={loading}
+          />
         </div>
 
         <div className="space-y-2">

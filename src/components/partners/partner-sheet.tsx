@@ -16,6 +16,7 @@ import { Textarea } from '@/components/ui/textarea'
 export type Partner = {
   id: number
   name: string
+  taxId: string | null
   email: string | null
   phone: string | null
   contactInfo: string | null

@@ -19,6 +19,11 @@ import {
 	loadVehicleColumns,
 	saveVehicleColumns,
 } from "@/lib/vehicle-columns";
+import {
+	DEFAULT_PARTNER_COLUMNS,
+	loadPartnerColumns,
+	savePartnerColumns,
+} from "@/lib/partner-columns";
 
 function serialize(cols: Column[]) {
 	return JSON.stringify(cols.map((c) => ({ key: c.key, visible: c.visible })));
@@ -28,23 +33,28 @@ export default function ColumnsSettings() {
 	const [bookingCols, setBookingCols] = useState<Column[]>(() => loadBookingColumns());
 	const [driverCols, setDriverCols] = useState<Column[]>(() => loadDriverColumns());
 	const [vehicleCols, setVehicleCols] = useState<Column[]>(() => loadVehicleColumns());
+	const [partnerCols, setPartnerCols] = useState<Column[]>(() => loadPartnerColumns());
 
 	const [savedBooking, setSavedBooking] = useState(() => serialize(loadBookingColumns()));
 	const [savedDriver, setSavedDriver] = useState(() => serialize(loadDriverColumns()));
 	const [savedVehicle, setSavedVehicle] = useState(() => serialize(loadVehicleColumns()));
+	const [savedPartner, setSavedPartner] = useState(() => serialize(loadPartnerColumns()));
 
 	const isDirty =
 		serialize(bookingCols) !== savedBooking ||
 		serialize(driverCols) !== savedDriver ||
-		serialize(vehicleCols) !== savedVehicle;
+		serialize(vehicleCols) !== savedVehicle ||
+		serialize(partnerCols) !== savedPartner;
 
 	function handleSave() {
 		saveBookingColumns(bookingCols);
 		saveDriverColumns(driverCols);
 		saveVehicleColumns(vehicleCols);
+		savePartnerColumns(partnerCols);
 		setSavedBooking(serialize(bookingCols));
 		setSavedDriver(serialize(driverCols));
 		setSavedVehicle(serialize(vehicleCols));
+		setSavedPartner(serialize(partnerCols));
 		toast.success("Ρυθμίσεις αποθηκεύτηκαν");
 	}
 
@@ -52,6 +62,7 @@ export default function ColumnsSettings() {
 		setBookingCols(DEFAULT_BOOKING_COLUMNS);
 		setDriverCols(DEFAULT_DRIVER_COLUMNS);
 		setVehicleCols(DEFAULT_VEHICLE_COLUMNS);
+		setPartnerCols(DEFAULT_PARTNER_COLUMNS);
 	}
 
 	return (
@@ -93,6 +104,15 @@ export default function ColumnsSettings() {
 						description="Σύρετε για αλλαγή σειράς · Checkbox για ορατότητα"
 						columns={vehicleCols}
 						onChange={setVehicleCols}
+					/>
+				</div>
+
+				<div className="bg-white rounded-md border border-t-4 border-t-[#f9cf44] p-6 w-72">
+					<ColumnPanel
+						title="Κολώνες Συνεργατών"
+						description="Σύρετε για αλλαγή σειράς · Checkbox για ορατότητα"
+						columns={partnerCols}
+						onChange={setPartnerCols}
 					/>
 				</div>
 			</div>
