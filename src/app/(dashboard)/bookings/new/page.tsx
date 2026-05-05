@@ -34,7 +34,6 @@ export default async function NewBookingPage() {
 				vehicles={allVehicles}
 				partners={allPartners}
 				history={[]}
-				microExpenses={[]}
 			/>
 		</div>
 	);

@@ -6,7 +6,6 @@ import {
 	bookingHistory,
 	bookings,
 	drivers,
-	microExpenses,
 	partners,
 	providers,
 	vehicles,
@@ -63,7 +62,6 @@ export default async function BookingDetailPage({ params }: PageProps) {
 		allDrivers,
 		allVehicles,
 		allPartners,
-		bookingMicroExpenses,
 	] = await Promise.all([
 		db
 			.select()
@@ -88,20 +86,6 @@ export default async function BookingDetailPage({ params }: PageProps) {
 			.select({ id: partners.id, name: partners.name })
 			.from(partners)
 			.orderBy(asc(partners.name)),
-		db
-			.select({
-				id: microExpenses.id,
-				reason: microExpenses.reason,
-				price: microExpenses.price,
-				date: microExpenses.date,
-				description: microExpenses.description,
-				driverId: microExpenses.driverId,
-				driverName: drivers.fullName,
-			})
-			.from(microExpenses)
-			.innerJoin(drivers, eq(microExpenses.driverId, drivers.id))
-			.where(eq(microExpenses.bookingId, bookingId))
-			.orderBy(desc(microExpenses.date)),
 	]);
 
 	return (
@@ -138,7 +122,6 @@ export default async function BookingDetailPage({ params }: PageProps) {
 				vehicles={allVehicles}
 				partners={allPartners}
 				history={history}
-				microExpenses={bookingMicroExpenses}
 			/>
 		</div>
 	);

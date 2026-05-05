@@ -29,6 +29,11 @@ import {
 	loadProviderColumns,
 	saveProviderColumns,
 } from "@/lib/provider-columns";
+import {
+	DEFAULT_MICRO_EXPENSE_COLUMNS,
+	loadMicroExpenseColumns,
+	saveMicroExpenseColumns,
+} from "@/lib/micro-expense-columns";
 
 function serialize(cols: Column[]) {
 	return JSON.stringify(cols.map((c) => ({ key: c.key, visible: c.visible })));
@@ -40,19 +45,22 @@ export default function ColumnsSettings() {
 	const [vehicleCols, setVehicleCols] = useState<Column[]>(() => loadVehicleColumns());
 	const [partnerCols, setPartnerCols] = useState<Column[]>(() => loadPartnerColumns());
 	const [providerCols, setProviderCols] = useState<Column[]>(() => loadProviderColumns());
+	const [microExpenseCols, setMicroExpenseCols] = useState<Column[]>(() => loadMicroExpenseColumns());
 
 	const [savedBooking, setSavedBooking] = useState(() => serialize(loadBookingColumns()));
 	const [savedDriver, setSavedDriver] = useState(() => serialize(loadDriverColumns()));
 	const [savedVehicle, setSavedVehicle] = useState(() => serialize(loadVehicleColumns()));
 	const [savedPartner, setSavedPartner] = useState(() => serialize(loadPartnerColumns()));
 	const [savedProvider, setSavedProvider] = useState(() => serialize(loadProviderColumns()));
+	const [savedMicroExpense, setSavedMicroExpense] = useState(() => serialize(loadMicroExpenseColumns()));
 
 	const isDirty =
 		serialize(bookingCols) !== savedBooking ||
 		serialize(driverCols) !== savedDriver ||
 		serialize(vehicleCols) !== savedVehicle ||
 		serialize(partnerCols) !== savedPartner ||
-		serialize(providerCols) !== savedProvider;
+		serialize(providerCols) !== savedProvider ||
+		serialize(microExpenseCols) !== savedMicroExpense;
 
 	function handleSave() {
 		saveBookingColumns(bookingCols);
@@ -60,11 +68,13 @@ export default function ColumnsSettings() {
 		saveVehicleColumns(vehicleCols);
 		savePartnerColumns(partnerCols);
 		saveProviderColumns(providerCols);
+		saveMicroExpenseColumns(microExpenseCols);
 		setSavedBooking(serialize(bookingCols));
 		setSavedDriver(serialize(driverCols));
 		setSavedVehicle(serialize(vehicleCols));
 		setSavedPartner(serialize(partnerCols));
 		setSavedProvider(serialize(providerCols));
+		setSavedMicroExpense(serialize(microExpenseCols));
 		toast.success("Ρυθμίσεις αποθηκεύτηκαν");
 	}
 
@@ -74,6 +84,7 @@ export default function ColumnsSettings() {
 		setVehicleCols(DEFAULT_VEHICLE_COLUMNS);
 		setPartnerCols(DEFAULT_PARTNER_COLUMNS);
 		setProviderCols(DEFAULT_PROVIDER_COLUMNS);
+		setMicroExpenseCols(DEFAULT_MICRO_EXPENSE_COLUMNS);
 	}
 
 	return (
@@ -133,6 +144,15 @@ export default function ColumnsSettings() {
 						description="Σύρετε για αλλαγή σειράς · Checkbox για ορατότητα"
 						columns={providerCols}
 						onChange={setProviderCols}
+					/>
+				</div>
+
+				<div className="bg-white rounded-md border border-t-4 border-t-[#f9cf44] p-6 w-72">
+					<ColumnPanel
+						title="Κολώνες Μικροεξόδων"
+						description="Σύρετε για αλλαγή σειράς · Checkbox για ορατότητα"
+						columns={microExpenseCols}
+						onChange={setMicroExpenseCols}
 					/>
 				</div>
 			</div>

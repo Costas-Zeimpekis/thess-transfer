@@ -1,9 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import React from "react";
+import { useMemo, useState, useEffect } from "react";
 import { toast } from "sonner";
-import { Pencil, Trash2, Check, X, Plus } from "lucide-react";
+import * as XLSX from "xlsx";
+import { Pencil, Trash2, Check, X, Plus, Download } from "lucide-react";
 import { FaSlidersH, FaTimes } from "react-icons/fa";
+import {
+	DEFAULT_MICRO_EXPENSE_COLUMNS,
+	loadMicroExpenseColumns,
+	type MicroExpenseColumn,
+} from "@/lib/micro-expense-columns";
 import Navigation from "@/components/ui/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -79,6 +86,7 @@ export default function MicroExpensesClient({
 	const [editId, setEditId] = useState<number | null>(null);
 	const [editState, setEditState] = useState<EditState | null>(null);
 	const [saving, setSaving] = useState(false);
+	const [newErrors, setNewErrors] = useState<{ driverId?: string; reason?: string; price?: string; date?: string }>({});
 	const [filtersOpen, setFiltersOpen] = useState(false);
 
 	const [filterDriver, setFilterDriver] = useState("all");
@@ -119,6 +127,60 @@ export default function MicroExpensesClient({
 		[filtered],
 	);
 
+	const [columnConfig, setColumnConfig] = useState<MicroExpenseColumn[]>(DEFAULT_MICRO_EXPENSE_COLUMNS);
+	useEffect(() => { setColumnConfig(loadMicroExpenseColumns()); }, []);
+
+	const visibleCols = columnConfig.filter((c) => c.visible);
+
+	const colDefs: Record<string, {
+		head: React.ReactNode;
+		cell: (e: MicroExpense) => React.ReactNode;
+		editCell: () => React.ReactNode;
+	}> = {
+		driverName: {
+			head: "Οδηγός",
+			cell: (e) => <TableCell key="driverName">{e.driverName}</TableCell>,
+			editCell: () => (
+				<TableCell key="driverName" className="p-1">
+					<Select value={editState!.driverId} onValueChange={(v) => setEditState((s) => s && { ...s, driverId: v ?? "" })}>
+						<SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+						<SelectContent>{drivers.map((d) => <SelectItem key={d.id} value={String(d.id)}>{d.fullName}</SelectItem>)}</SelectContent>
+					</Select>
+				</TableCell>
+			),
+		},
+		reason: {
+			head: "Κατηγορία",
+			cell: (e) => <TableCell key="reason">{reasonLabel(e.reason)}</TableCell>,
+			editCell: () => (
+				<TableCell key="reason" className="p-1">
+					<Select value={editState!.reason} onValueChange={(v) => setEditState((s) => s && { ...s, reason: v ?? "" })}>
+						<SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+						<SelectContent>{EXPENSE_CATEGORIES.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}</SelectContent>
+					</Select>
+				</TableCell>
+			),
+		},
+		price: {
+			head: "Ποσό",
+			cell: (e) => <TableCell key="price" className="font-medium">€{parseFloat(e.price).toFixed(2)}</TableCell>,
+			editCell: () => (
+				<TableCell key="price" className="p-1">
+					<Input type="number" min="0" step="0.01" className="h-8 text-sm w-24" value={editState!.price} onChange={(ev) => setEditState((s) => s && { ...s, price: ev.target.value })} />
+				</TableCell>
+			),
+		},
+		description: {
+			head: "Περιγραφή",
+			cell: (e) => <TableCell key="description" className="text-muted-foreground text-sm">{e.description ?? "—"}</TableCell>,
+			editCell: () => (
+				<TableCell key="description" className="p-1">
+					<Input className="h-8 text-sm" value={editState!.description ?? ""} onChange={(ev) => setEditState((s) => s && { ...s, description: ev.target.value })} />
+				</TableCell>
+			),
+		},
+	};
+
 	const activeFilterCount = [
 		appliedDriver !== "all",
 		appliedFrom !== "",
@@ -137,12 +199,18 @@ export default function MicroExpensesClient({
 
 	function handleCancelNew() {
 		setNewExpense(null);
+		setNewErrors({});
 	}
 
 	async function handleSaveNew() {
 		if (!newExpense) return;
-		if (!newExpense.driverId || !newExpense.reason || !newExpense.price || !newExpense.date) {
-			toast.error("Συμπληρώστε όλα τα υποχρεωτικά πεδία");
+		const errors: typeof newErrors = {};
+		if (!newExpense.driverId) errors.driverId = "Υποχρεωτικό πεδίο";
+		if (!newExpense.reason) errors.reason = "Υποχρεωτικό πεδίο";
+		if (!newExpense.price) errors.price = "Υποχρεωτικό πεδίο";
+		if (!newExpense.date) errors.date = "Υποχρεωτικό πεδίο";
+		if (Object.keys(errors).length > 0) {
+			setNewErrors(errors);
 			return;
 		}
 		setSaving(true);
@@ -170,6 +238,7 @@ export default function MicroExpensesClient({
 				...prev,
 			]);
 			setNewExpense(null);
+			setNewErrors({});
 			toast.success("Το μικροέξοδο αποθηκεύτηκε");
 		} finally {
 			setSaving(false);
@@ -231,6 +300,23 @@ export default function MicroExpensesClient({
 		}
 	}
 
+	function handleExport() {
+		const now = new Date();
+		const pad = (n: number) => String(n).padStart(2, "0");
+		const filename = `microexpenses-${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}-${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}.xlsx`;
+		const rows = filtered.map((e) => ({
+			Ημερομηνία: e.date,
+			Οδηγός: e.driverName,
+			Κατηγορία: reasonLabel(e.reason),
+			"Ποσό (€)": parseFloat(e.price),
+			Περιγραφή: e.description ?? "",
+		}));
+		const ws = XLSX.utils.json_to_sheet(rows);
+		const wb = XLSX.utils.book_new();
+		XLSX.utils.book_append_sheet(wb, ws, "Μικροέξοδα");
+		XLSX.writeFile(wb, filename);
+	}
+
 	async function handleDelete(id: number) {
 		if (!confirm("Διαγραφή μικροεξόδου;")) return;
 		const res = await fetch(`/api/micro-expenses/${id}`, { method: "DELETE" });
@@ -248,10 +334,15 @@ export default function MicroExpensesClient({
 			<div className="flex-1 min-w-0 bg-white p-4 flex flex-col min-h-0 gap-4">
 				<div className="flex items-center gap-3">
 					<Navigation />
-					<div className="flex-1" />
+					<div className="flex-1 gap-2" />
+
 					<Button onClick={handleAddNew} disabled={!!newExpense}>
-						<Plus size={16} className="mr-1" />
+						<Plus size={16} />
 						Νέο Μικροέξοδο
+					</Button>
+					<Button variant="outline" onClick={handleExport} disabled={filtered.length === 0}>
+						<Download size={16} className="mr-1" />
+						Εξαγωγή XLSX
 					</Button>
 				</div>
 
@@ -263,12 +354,15 @@ export default function MicroExpensesClient({
 								<Label className="text-xs">Οδηγός *</Label>
 								<Select
 									value={newExpense.driverId}
-									onValueChange={(v) =>
-										setNewExpense((s) => s && { ...s, driverId: v ?? "" })
-									}
+									onValueChange={(v) => {
+										setNewExpense((s) => s && { ...s, driverId: v ?? "" });
+										setNewErrors((e) => ({ ...e, driverId: undefined }));
+									}}
 								>
-									<SelectTrigger className="h-8 text-sm bg-white">
-										<SelectValue placeholder="Επιλογή…" />
+									<SelectTrigger className={`h-8 text-sm bg-white${newErrors.driverId ? " border-red-500" : ""}`}>
+										<SelectValue placeholder="Επιλογή…">
+											{drivers.find((d) => String(d.id) === newExpense.driverId)?.fullName}
+										</SelectValue>
 									</SelectTrigger>
 									<SelectContent>
 										{drivers.map((d) => (
@@ -278,16 +372,18 @@ export default function MicroExpensesClient({
 										))}
 									</SelectContent>
 								</Select>
+								{newErrors.driverId && <p className="text-xs text-red-500">{newErrors.driverId}</p>}
 							</div>
 							<div className="flex flex-col gap-1">
 								<Label className="text-xs">Κατηγορία *</Label>
 								<Select
 									value={newExpense.reason}
-									onValueChange={(v) =>
-										setNewExpense((s) => s && { ...s, reason: v ?? "" })
-									}
+									onValueChange={(v) => {
+										setNewExpense((s) => s && { ...s, reason: v ?? "" });
+										setNewErrors((e) => ({ ...e, reason: undefined }));
+									}}
 								>
-									<SelectTrigger className="h-8 text-sm bg-white">
+									<SelectTrigger className={`h-8 text-sm bg-white${newErrors.reason ? " border-red-500" : ""}`}>
 										<SelectValue placeholder="Επιλογή…" />
 									</SelectTrigger>
 									<SelectContent>
@@ -298,6 +394,7 @@ export default function MicroExpensesClient({
 										))}
 									</SelectContent>
 								</Select>
+								{newErrors.reason && <p className="text-xs text-red-500">{newErrors.reason}</p>}
 							</div>
 							<div className="flex flex-col gap-1">
 								<Label className="text-xs">Ποσό (€) *</Label>
@@ -305,23 +402,27 @@ export default function MicroExpensesClient({
 									type="number"
 									min="0"
 									step="0.01"
-									className="h-8 text-sm bg-white"
+									className={`h-8 text-sm bg-white${newErrors.price ? " border-red-500" : ""}`}
 									value={newExpense.price}
-									onChange={(e) =>
-										setNewExpense((s) => s && { ...s, price: e.target.value })
-									}
+									onChange={(e) => {
+										setNewExpense((s) => s && { ...s, price: e.target.value });
+										setNewErrors((err) => ({ ...err, price: undefined }));
+									}}
 								/>
+								{newErrors.price && <p className="text-xs text-red-500">{newErrors.price}</p>}
 							</div>
 							<div className="flex flex-col gap-1">
 								<Label className="text-xs">Ημερομηνία *</Label>
 								<Input
 									type="date"
-									className="h-8 text-sm bg-white"
+									className={`h-8 text-sm bg-white${newErrors.date ? " border-red-500" : ""}`}
 									value={newExpense.date}
-									onChange={(e) =>
-										setNewExpense((s) => s && { ...s, date: e.target.value })
-									}
+									onChange={(e) => {
+										setNewExpense((s) => s && { ...s, date: e.target.value });
+										setNewErrors((err) => ({ ...err, date: undefined }));
+									}}
 								/>
+								{newErrors.date && <p className="text-xs text-red-500">{newErrors.date}</p>}
 							</div>
 						</div>
 						<div className="flex flex-col gap-1">
@@ -348,157 +449,78 @@ export default function MicroExpensesClient({
 
 				<div className="rounded-md border border-t-4 border-t-[#f9cf44] overflow-x-scroll overflow-y-scroll flex-1 min-h-0">
 					<div className="min-w-max">
-					<Table>
-						<TableHeader className="sticky top-0 z-10 [&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-muted">
-							<TableRow className="bg-muted">
-								<TableHead className="font-extrabold bg-[#f9cf44] text-[#333333] w-[120px]">
-									Ημερομηνία
-								</TableHead>
-								<TableHead className="font-extrabold">Οδηγός</TableHead>
-								<TableHead className="font-extrabold">Κατηγορία</TableHead>
-								<TableHead className="font-extrabold">Ποσό</TableHead>
-								<TableHead className="font-extrabold">Περιγραφή</TableHead>
-								<TableHead className="font-extrabold w-[100px]" />
-							</TableRow>
-						</TableHeader>
-						<TableBody>
-							{filtered.length === 0 && (
-								<TableRow>
-									<TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-										Δεν βρέθηκαν μικροέξοδα
-									</TableCell>
+						<Table>
+							<TableHeader className="sticky top-0 z-10 [&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-muted">
+								<TableRow className="bg-muted">
+									<TableHead className="font-extrabold bg-[#f9cf44] text-[#333333] w-[120px]">
+										Ημερομηνία
+									</TableHead>
+									{visibleCols.map((col) => (
+										<TableHead key={col.key} className="font-extrabold">
+											{colDefs[col.key]?.head}
+										</TableHead>
+									))}
+									<TableHead className="font-extrabold w-[100px]" />
 								</TableRow>
-							)}
-							{filtered.map((expense) =>
-								editId === expense.id && editState ? (
-									<TableRow key={expense.id} className="bg-amber-50">
-										<TableCell className="p-1">
-											<Input
-												type="date"
-												className="h-8 text-sm"
-												value={editState.date}
-												onChange={(e) =>
-													setEditState((s) => s && { ...s, date: e.target.value })
-												}
-											/>
-										</TableCell>
-										<TableCell className="p-1">
-											<Select
-												value={editState.driverId}
-												onValueChange={(v) =>
-													setEditState((s) => s && { ...s, driverId: v ?? "" })
-												}
-											>
-												<SelectTrigger className="h-8 text-sm">
-													<SelectValue />
-												</SelectTrigger>
-												<SelectContent>
-													{drivers.map((d) => (
-														<SelectItem key={d.id} value={String(d.id)}>
-															{d.fullName}
-														</SelectItem>
-													))}
-												</SelectContent>
-											</Select>
-										</TableCell>
-										<TableCell className="p-1">
-											<Select
-												value={editState.reason}
-												onValueChange={(v) =>
-													setEditState((s) => s && { ...s, reason: v ?? "" })
-												}
-											>
-												<SelectTrigger className="h-8 text-sm">
-													<SelectValue />
-												</SelectTrigger>
-												<SelectContent>
-													{EXPENSE_CATEGORIES.map((c) => (
-														<SelectItem key={c.value} value={c.value}>
-															{c.label}
-														</SelectItem>
-													))}
-												</SelectContent>
-											</Select>
-										</TableCell>
-										<TableCell className="p-1">
-											<Input
-												type="number"
-												min="0"
-												step="0.01"
-												className="h-8 text-sm w-24"
-												value={editState.price}
-												onChange={(e) =>
-													setEditState((s) => s && { ...s, price: e.target.value })
-												}
-											/>
-										</TableCell>
-										<TableCell className="p-1">
-											<Input
-												className="h-8 text-sm"
-												value={editState.description}
-												onChange={(e) =>
-													setEditState((s) => s && { ...s, description: e.target.value })
-												}
-											/>
-										</TableCell>
-										<TableCell className="p-1">
-											<div className="flex gap-1">
-												<Button
-													size="icon"
-													variant="ghost"
-													className="h-8 w-8 text-green-600"
-													disabled={saving}
-													onClick={() => handleSaveEdit(expense.id)}
-												>
-													<Check size={15} />
-												</Button>
-												<Button
-													size="icon"
-													variant="ghost"
-													className="h-8 w-8 text-muted-foreground"
-													onClick={handleCancelEdit}
-												>
-													<X size={15} />
-												</Button>
-											</div>
+							</TableHeader>
+							<TableBody>
+								{filtered.length === 0 && (
+									<TableRow>
+										<TableCell colSpan={2 + visibleCols.length} className="text-center text-muted-foreground py-8">
+											Δεν βρέθηκαν μικροέξοδα
 										</TableCell>
 									</TableRow>
-								) : (
-									<TableRow key={expense.id}>
-										<TableCell className="font-mono text-sm">{expense.date}</TableCell>
-										<TableCell>{expense.driverName}</TableCell>
-										<TableCell>{reasonLabel(expense.reason)}</TableCell>
-										<TableCell className="font-medium">
-											€{parseFloat(expense.price).toFixed(2)}
-										</TableCell>
-										<TableCell className="text-muted-foreground text-sm">
-											{expense.description ?? "—"}
-										</TableCell>
-										<TableCell>
-											<div className="flex gap-1">
-												<Button
-													size="icon"
-													variant="ghost"
-													className="h-8 w-8"
-													onClick={() => handleStartEdit(expense)}
-												>
-													<Pencil size={14} />
-												</Button>
-												<Button
-													size="icon"
-													variant="ghost"
-													className="h-8 w-8 text-red-500 hover:text-red-700"
-													onClick={() => handleDelete(expense.id)}
-												>
-													<Trash2 size={14} />
-												</Button>
-											</div>
-										</TableCell>
-									</TableRow>
-								),
-							)}
-						</TableBody>
-					</Table>
+								)}
+								{filtered.map((expense) =>
+									editId === expense.id && editState ? (
+										<TableRow key={expense.id} className="bg-amber-50">
+											<TableCell className="p-1">
+												<Input
+													type="date"
+													className="h-8 text-sm"
+													value={editState.date}
+													onChange={(e) => setEditState((s) => s && { ...s, date: e.target.value })}
+												/>
+											</TableCell>
+											{visibleCols.map((col) => (
+												<React.Fragment key={col.key}>
+													{colDefs[col.key]?.editCell()}
+												</React.Fragment>
+											))}
+											<TableCell className="p-1">
+												<div className="flex gap-1">
+													<Button size="icon" variant="ghost" className="h-8 w-8 text-green-600" disabled={saving} onClick={() => handleSaveEdit(expense.id)}>
+														<Check size={15} />
+													</Button>
+													<Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground" onClick={handleCancelEdit}>
+														<X size={15} />
+													</Button>
+												</div>
+											</TableCell>
+										</TableRow>
+									) : (
+										<TableRow key={expense.id}>
+											<TableCell className="font-mono text-sm">{expense.date}</TableCell>
+											{visibleCols.map((col) => (
+												<React.Fragment key={col.key}>
+													{colDefs[col.key]?.cell(expense)}
+												</React.Fragment>
+											))}
+											<TableCell>
+												<div className="flex gap-1">
+													<Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleStartEdit(expense)}>
+														<Pencil size={14} />
+													</Button>
+													<Button size="icon" variant="ghost" className="h-8 w-8 text-red-500 hover:text-red-700" onClick={() => handleDelete(expense.id)}>
+														<Trash2 size={14} />
+													</Button>
+												</div>
+											</TableCell>
+										</TableRow>
+									),
+								)}
+							</TableBody>
+						</Table>
 					</div>
 				</div>
 

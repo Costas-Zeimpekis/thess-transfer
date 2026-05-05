@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { FaEdit } from "react-icons/fa";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -30,24 +29,6 @@ type HistoryEntry = {
 	changes: unknown;
 	createdAt: Date | string | null;
 };
-type MicroExpense = {
-	id: number;
-	reason: string;
-	price: string;
-	date: Date | string;
-	description: string | null;
-	driverId: number | null;
-	driverName: string;
-};
-
-const EXPENSE_CATEGORIES = [
-	{ value: "gas", label: "Βενζίνη" },
-	{ value: "food", label: "Φαγητό" },
-	{ value: "fine", label: "Πρόστιμο" },
-	{ value: "customer", label: "Πελάτης" },
-	{ value: "driver", label: "Οδηγός" },
-	{ value: "other", label: "Άλλο" },
-];
 
 const STATUS_LABELS: Record<string, string> = {
 	pending: "Εκκρεμής",
@@ -79,7 +60,6 @@ type BookingFormProps = {
 	partners?: Partner[];
 	actions?: React.ReactNode;
 	history?: HistoryEntry[];
-	microExpenses?: MicroExpense[];
 };
 
 export default function BookingForm({
@@ -90,7 +70,6 @@ export default function BookingForm({
 	partners,
 	actions,
 	history,
-	microExpenses,
 }: BookingFormProps) {
 	const router = useRouter();
 	const isEdit = !!booking;
@@ -152,117 +131,6 @@ export default function BookingForm({
 	const [assignPartnerPrice, setAssignPartnerPrice] = useState(
 		booking?.partnerAssignmentPrice ?? "",
 	);
-
-	// Micro-expenses local state
-	type ExpenseRow = MicroExpense & { editing?: boolean };
-	type NewExpenseRow = {
-		reason: string;
-		price: string;
-		date: string;
-		description: string;
-	};
-	const [expenses, setExpenses] = useState<ExpenseRow[]>(
-		(microExpenses ?? []).map((e) => ({ ...e, editing: false })),
-	);
-	const [editDrafts, setEditDrafts] = useState<Record<number, NewExpenseRow>>({});
-	const [newExpense, setNewExpense] = useState<NewExpenseRow>({
-		reason: "",
-		price: "",
-		date: new Date().toISOString().slice(0, 10),
-		description: "",
-	});
-	const [expenseLoading, setExpenseLoading] = useState<Record<string, boolean>>({});
-
-	function todayStr() {
-		return new Date().toISOString().slice(0, 10);
-	}
-
-	async function saveNew() {
-		setExpenseLoading((p) => ({ ...p, new: true }));
-		try {
-			const res = await fetch("/api/micro-expenses", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					booking_id: booking?.id,
-					driver_id: booking?.driverId ?? null,
-					reason: newExpense.reason,
-					price: newExpense.price,
-					date: newExpense.date,
-					description: newExpense.description || null,
-				}),
-			});
-			if (!res.ok) return;
-			const saved = await res.json();
-			const driverObj = drivers?.find((d) => d.id === saved.driverId);
-			setExpenses((prev) => [
-				...prev,
-				{ ...saved, driverName: driverObj?.fullName ?? "", editing: false },
-			]);
-			setNewExpense({ reason: "", price: "", date: todayStr(), description: "" });
-		} finally {
-			setExpenseLoading((p) => ({ ...p, new: false }));
-		}
-	}
-
-	function startEdit(id: number, e: ExpenseRow) {
-		setEditDrafts((prev) => ({
-			...prev,
-			[id]: {
-				reason: e.reason,
-				price: e.price,
-				date: typeof e.date === "string" ? e.date.slice(0, 10) : e.date.toISOString().slice(0, 10),
-				description: e.description ?? "",
-			},
-		}));
-		setExpenses((prev) => prev.map((x) => (x.id === id ? { ...x, editing: true } : x)));
-	}
-
-	async function saveEdit(id: number) {
-		const draft = editDrafts[id];
-		if (!draft) return;
-		const original = expenses.find((x) => x.id === id);
-		if (!original) return;
-		setExpenseLoading((p) => ({ ...p, [id]: true }));
-		try {
-			const res = await fetch(`/api/micro-expenses/${id}`, {
-				method: "PUT",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					driver_id: original.driverId,
-					reason: draft.reason,
-					price: draft.price,
-					date: draft.date,
-					description: draft.description || null,
-				}),
-			});
-			if (!res.ok) return;
-			setExpenses((prev) =>
-				prev.map((x) =>
-					x.id === id ? { ...x, ...draft, editing: false } : x,
-				),
-			);
-			setEditDrafts((prev) => { const n = { ...prev }; delete n[id]; return n; });
-		} finally {
-			setExpenseLoading((p) => ({ ...p, [id]: false }));
-		}
-	}
-
-	function cancelEdit(id: number) {
-		setEditDrafts((prev) => { const n = { ...prev }; delete n[id]; return n; });
-		setExpenses((prev) => prev.map((x) => (x.id === id ? { ...x, editing: false } : x)));
-	}
-
-	async function deleteExpense(id: number) {
-		if (!confirm("Διαγραφή μικροεξόδου;")) return;
-		setExpenseLoading((p) => ({ ...p, [id]: true }));
-		try {
-			await fetch(`/api/micro-expenses/${id}`, { method: "DELETE" });
-			setExpenses((prev) => prev.filter((x) => x.id !== id));
-		} finally {
-			setExpenseLoading((p) => ({ ...p, [id]: false }));
-		}
-	}
 
 	const [loading, setLoading] = useState(false);
 	const [transitioning, setTransitioning] = useState(false);
@@ -1062,155 +930,8 @@ export default function BookingForm({
 						</form>
 					</div>
 					<div className="flex-1 min-w-0 flex flex-col">
-						{(history !== undefined || microExpenses !== undefined) && (
+						{history !== undefined && (
 							<div className="flex flex-col gap-6 flex-1">
-								{microExpenses !== undefined && (
-									<Card className="h-[380px] flex flex-col" >
-										<CardHeader className="pb-2">
-											<CardTitle className="text-base text-black font-semibold">
-												Μικροέξοδα
-											</CardTitle>
-											<hr className="border-b-2 border-b-[#f9cf44]" />
-										</CardHeader>
-										<CardContent className="space-y-4 flex-1">
-											<div className="space-y-2" style={{display: 'flex', flexDirection: 'column'}}>
-												<div className="grid grid-cols-[24px_140px_130px_1fr_100px_100px] gap-2 text-xs text-muted-foreground font-medium px-1">
-													<span>#</span>
-													<span>Ημ/νία</span>
-													<span>Κατηγορία</span>
-													<span>Περιγραφή</span>
-													<span>Ποσό</span>
-													<span />
-												</div>
-																		 
-										 
-												<div className="grid grid-cols-[24px_140px_130px_1fr_100px_100px] gap-2 items-center space-y-2">
-														<span className="text-xs text-muted-foreground text-center"></span>
-													<Input
-														className="h-8 text-xs"
-														type="date"
-														value={newExpense.date}
-														onChange={(ev) => setNewExpense((p) => ({ ...p, date: ev.target.value }))}
-													/>
-													<Select
-														value={newExpense.reason}
-														onValueChange={(v) => setNewExpense((p) => ({ ...p, reason: v ?? "" }))}
-													>
-														<SelectTrigger className="h-8 text-xs">
-															<SelectValue placeholder="Κατηγορία">
-																{EXPENSE_CATEGORIES.find((c) => c.value === newExpense.reason)?.label}
-															</SelectValue>
-														</SelectTrigger>
-														<SelectContent>
-															{EXPENSE_CATEGORIES.map((c) => (
-																<SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-															))}
-														</SelectContent>
-													</Select>
-													<Input
-														className="h-8 text-xs"
-														value={newExpense.description}
-														onChange={(ev) => setNewExpense((p) => ({ ...p, description: ev.target.value }))}
-														placeholder="Περιγραφή"
-													/>
-													<Input
-														className="h-8 text-xs"
-														type="number"
-														step="0.01"
-														value={newExpense.price}
-														onChange={(ev) => setNewExpense((p) => ({ ...p, price: ev.target.value }))}
-														placeholder="0.00"
-													/>
-													<Button type="button" size="sm" onClick={saveNew} disabled={expenseLoading["new"]}>
-														Αποθήκευση
-													</Button>
-												</div>
-											 
-										 
-										 
-
-					
-												<hr className="border-muted" />
-												<div style={{ overflow: 'auto', flexGrow: 1}}>
-												{expenses.length === 0 && (
-													<p className="text-sm text-muted-foreground px-1">Δεν υπάρχουν μικροέξοδα</p>
-												)}
-
-												{expenses.map((e) =>
-													e.editing ? (
-														<div key={e.id} className="grid grid-cols-[24px_140px_130px_1fr_100px_100px] gap-2 items-center">
-															<span className="text-xs text-muted-foreground text-center">{expenses.indexOf(e) + 1}</span>
-															<Input
-																className="h-8 text-xs"
-																type="date"
-																value={editDrafts[e.id]?.date ?? ""}
-																onChange={(ev) => setEditDrafts((p) => ({ ...p, [e.id]: { ...p[e.id], date: ev.target.value } }))}
-															/>
-															<Select
-																value={editDrafts[e.id]?.reason ?? ""}
-																onValueChange={(v) => setEditDrafts((p) => ({ ...p, [e.id]: { ...p[e.id], reason: v ?? "" } }))}
-															>
-																<SelectTrigger className="h-8 text-xs">
-																	<SelectValue placeholder="Κατηγορία">
-																		{EXPENSE_CATEGORIES.find((c) => c.value === (editDrafts[e.id]?.reason ?? ""))?.label}
-																	</SelectValue>
-																</SelectTrigger>
-																<SelectContent>
-																	{EXPENSE_CATEGORIES.map((c) => (
-																		<SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-																	))}
-																</SelectContent>
-															</Select>
-															<Input
-																className="h-8 text-xs"
-																value={editDrafts[e.id]?.description ?? ""}
-																onChange={(ev) => setEditDrafts((p) => ({ ...p, [e.id]: { ...p[e.id], description: ev.target.value } }))}
-																placeholder="Περιγραφή"
-															/>
-															<Input
-																className="h-8 text-xs"
-																type="number"
-																step="0.01"
-																value={editDrafts[e.id]?.price ?? ""}
-																onChange={(ev) => setEditDrafts((p) => ({ ...p, [e.id]: { ...p[e.id], price: ev.target.value } }))}
-																placeholder="0.00"
-															/>
-															<div className="flex gap-1">
-																<Button type="button" size="sm" className="h-8 px-2 text-xs" onClick={() => saveEdit(e.id)} disabled={expenseLoading[e.id]}>
-																	✓
-																</Button>
-																<Button type="button" size="sm" variant="ghost" className="h-8 px-2 text-xs" onClick={() => cancelEdit(e.id)}>
-																	✕
-																</Button>
-															</div>
-														</div>
-													) : (
-														<div key={e.id} className="grid grid-cols-[24px_140px_130px_1fr_100px_100px] gap-2 items-center text-sm">
-															<span className="text-xs text-muted-foreground text-center">{expenses.indexOf(e) + 1}</span>
-															<span className="text-xs text-muted-foreground">
-																{new Date(e.date).toLocaleDateString("el-GR", { day: "2-digit", month: "2-digit", year: "numeric" })}
-															</span>
-															<span className="truncate">
-																{EXPENSE_CATEGORIES.find((c) => c.value === e.reason)?.label ?? e.reason}
-															</span>
-															<span className="truncate text-muted-foreground text-xs">{e.description ?? "—"}</span>
-															<span className="font-mono">€{parseFloat(e.price).toFixed(2)}</span>
-															<div className="flex gap-1">
-																<Button type="button" size="sm" variant="ghost" className="h-7 px-1.5 text-xs" onClick={() => startEdit(e.id, e)}>
-																	<FaEdit />
-																</Button>
-																<Button type="button" size="sm" variant="ghost" className="h-7 px-1.5 text-xs text-destructive hover:text-destructive" onClick={() => deleteExpense(e.id)} disabled={expenseLoading[e.id]}>
-																	✕
-																</Button>
-															</div>
-														</div>
-													)
-												)}
-												</div>
-											</div>
-										</CardContent>
-									</Card>
-								)}
 								<Card className="h-[205px]">
 									<CardHeader>
 										<CardTitle className="text-base text-black size-5 w-full font-semibold">
