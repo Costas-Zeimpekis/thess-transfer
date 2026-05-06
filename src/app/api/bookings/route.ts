@@ -207,7 +207,21 @@ export async function POST(request: Request) {
 		);
 	}
 
-	// Auto-generate ref for own bookings
+	if (provider_id && provider_booking_ref) {
+		const duplicate = await db
+			.select({ id: bookings.id })
+			.from(bookings)
+			.where(and(eq(bookings.providerId, provider_id), eq(bookings.providerBookingRef, provider_booking_ref)))
+			.limit(1);
+		if (duplicate.length > 0) {
+			return NextResponse.json(
+				{ error: "Το Ref Παρόχου υπάρχει ήδη για αυτόν τον πάροχο" },
+				{ status: 409 },
+			);
+		}
+	}
+
+	// Auto-generate ref for own bookings (updated to MAN-{id} after insert)
 	const resolvedRef = isProviderBooking
 		? provider_booking_ref
 		: `OWN-${Date.now()}`;
@@ -246,7 +260,16 @@ export async function POST(request: Request) {
 		})
 		.returning();
 
-	const booking = result[0];
+	let booking = result[0];
+
+	if (!isProviderBooking) {
+		const updated = await db
+			.update(bookings)
+			.set({ providerBookingRef: `MAN-${booking.id}` })
+			.where(eq(bookings.id, booking.id))
+			.returning();
+		booking = updated[0];
+	}
 
 	await db.insert(bookingHistory).values({
 		bookingId: booking.id,

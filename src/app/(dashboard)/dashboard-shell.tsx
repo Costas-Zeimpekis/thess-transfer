@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Toaster } from "@/components/ui/sonner";
 import {
 	Dialog,
 	DialogContent,
@@ -72,6 +73,7 @@ export default function DashboardShell({
 	}
 
 	return (
+		<>
 		<TooltipProvider>
 			<div className="h-screen flex flex-col overflow-hidden">
 				{/* Top bar: brand + user actions */}
@@ -164,5 +166,7 @@ export default function DashboardShell({
 				</DialogContent>
 			</Dialog>
 		</TooltipProvider>
+		<Toaster position="top-right" closeButton closeOnClick={false} />
+		</>
 	);
 }

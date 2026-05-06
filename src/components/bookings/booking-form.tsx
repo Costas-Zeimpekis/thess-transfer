@@ -11,12 +11,13 @@ import { Label } from "@/components/ui/label";
 import {
 	Select,
 	SelectContent,
-	
+
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 import { type BookingFormData } from "./booking-sheet";
 
 type Provider = { id: number; name: string };
@@ -134,7 +135,6 @@ export default function BookingForm({
 
 	const [loading, setLoading] = useState(false);
 	const [transitioning, setTransitioning] = useState(false);
-	const [error, setError] = useState("");
 	const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
 	function clearError(field: string) {
@@ -189,12 +189,12 @@ export default function BookingForm({
 			});
 			if (!res.ok) {
 				const data = await res.json();
-				setError(data.error ?? "Σφάλμα κατά την αλλαγή κατάστασης.");
+				toast.error(data.error ?? "Σφάλμα κατά την αλλαγή κατάστασης.", { duration: 10000 });
 			} else {
 				router.refresh();
 			}
 		} catch {
-			setError("Σφάλμα. Δοκιμάστε ξανά.");
+			toast.error("Σφάλμα. Δοκιμάστε ξανά.", { duration: 10000 });
 		} finally {
 			setTransitioning(false);
 		}
@@ -209,45 +209,44 @@ export default function BookingForm({
 	}[] =
 		booking?.status === "pending"
 			? [
+				{
+					label: "Επιβεβαίωση",
+					status: "confirmed",
+					className: "bg-blue-600 hover:bg-blue-700 text-white border-0",
+				},
+				{
+					label: "Ακύρωση κράτησης",
+					status: "cancelled",
+					className: "bg-red-600 hover:bg-red-700 text-white border-0",
+					confirm: "Είστε σίγουρος ότι θέλετε να ακυρώσετε αυτή την κράτηση;",
+				},
+			]
+			: booking?.status === "confirmed"
+				? [
 					{
-						label: "Επιβεβαίωση",
-						status: "confirmed",
-						className: "bg-blue-600 hover:bg-blue-700 text-white border-0",
+						label: "← Εκκρεμής",
+						status: "pending",
+						className: "variant-outline",
+						variant: "outline" as const,
+					},
+					{
+						label: "✓ Ολοκλήρωση",
+						status: "completed",
+						className: "bg-green-600 hover:bg-green-700 text-white border-0",
+						confirm: "Επιβεβαιώνετε την ολοκλήρωση της κράτησης;",
 					},
 					{
 						label: "Ακύρωση κράτησης",
 						status: "cancelled",
 						className: "bg-red-600 hover:bg-red-700 text-white border-0",
-						confirm: "Είστε σίγουρος ότι θέλετε να ακυρώσετε αυτή την κράτηση;",
+						confirm:
+							"Είστε σίγουρος ότι θέλετε να ακυρώσετε αυτή την κράτηση;",
 					},
 				]
-			: booking?.status === "confirmed"
-				? [
-						{
-							label: "← Εκκρεμής",
-							status: "pending",
-							className: "variant-outline",
-							variant: "outline" as const,
-						},
-						{
-							label: "✓ Ολοκλήρωση",
-							status: "completed",
-							className: "bg-green-600 hover:bg-green-700 text-white border-0",
-							confirm: "Επιβεβαιώνετε την ολοκλήρωση της κράτησης;",
-						},
-						{
-							label: "Ακύρωση κράτησης",
-							status: "cancelled",
-							className: "bg-red-600 hover:bg-red-700 text-white border-0",
-							confirm:
-								"Είστε σίγουρος ότι θέλετε να ακυρώσετε αυτή την κράτηση;",
-						},
-					]
 				: [];
 
 	async function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();
-		setError("");
 		if (!validate()) return;
 		setLoading(true);
 
@@ -309,7 +308,7 @@ export default function BookingForm({
 
 			if (!res.ok) {
 				const data = await res.json();
-				setError(data.error ?? "Σφάλμα. Δοκιμάστε ξανά.");
+				toast.error(data.error ?? "Σφάλμα. Δοκιμάστε ξανά.", { duration: 10000 });
 				return;
 			}
 
@@ -320,7 +319,7 @@ export default function BookingForm({
 				router.push(`/bookings/${data.id}`);
 			}
 		} catch {
-			setError("Σφάλμα. Δοκιμάστε ξανά.");
+			toast.error("Σφάλμα. Δοκιμάστε ξανά.", { duration: 10000 });
 		} finally {
 			setLoading(false);
 		}
@@ -398,7 +397,7 @@ export default function BookingForm({
 							noValidate
 						>
 							{/* Στοιχεία Κράτησης */}
-							<Card className="h-[380px] overflow-auto">
+							<Card className="h-[450px] overflow-auto">
 								<CardHeader>
 									<CardTitle className="text-base text-black size-5 w-full font-semibold">
 										Στοιχεία Κράτησης
@@ -475,20 +474,20 @@ export default function BookingForm({
 									)}
 
 									<div className="space-y-2">
-									<Label htmlFor="pickupDatetime" className={fieldErrors.pickupDatetime ? "text-red-500" : ""}>
-										Ημερομηνία & Ώρα Παραλαβής *
-									</Label>
-									<Input
-										id="pickupDatetime"
-										type="datetime-local"
-										value={pickupDatetime}
-										onChange={(e) => { setPickupDatetime(e.target.value); clearError("pickupDatetime"); }}
-										className={fieldErrors.pickupDatetime ? "border-red-500 focus-visible:ring-red-500" : ""}
-										disabled={loading}
-									/>
-									{fieldErrors.pickupDatetime && (
-										<p className="text-xs text-red-500">{fieldErrors.pickupDatetime}</p>
-									)}
+										<Label htmlFor="pickupDatetime" className={fieldErrors.pickupDatetime ? "text-red-500" : ""}>
+											Ημερομηνία & Ώρα Παραλαβής *
+										</Label>
+										<Input
+											id="pickupDatetime"
+											type="datetime-local"
+											value={pickupDatetime}
+											onChange={(e) => { setPickupDatetime(e.target.value); clearError("pickupDatetime"); }}
+											className={fieldErrors.pickupDatetime ? "border-red-500 focus-visible:ring-red-500" : ""}
+											disabled={loading}
+										/>
+										{fieldErrors.pickupDatetime && (
+											<p className="text-xs text-red-500">{fieldErrors.pickupDatetime}</p>
+										)}
 									</div>
 
 									<div className="space-y-2">
@@ -502,32 +501,32 @@ export default function BookingForm({
 									</div>
 
 									<div className="space-y-2">
-									<Label htmlFor="pickupLocation" className={fieldErrors.pickupLocation ? "text-red-500" : ""}>Τόπος Παραλαβής *</Label>
-									<Input
-										id="pickupLocation"
-										value={pickupLocation}
-										onChange={(e) => { setPickupLocation(e.target.value); clearError("pickupLocation"); }}
-										className={fieldErrors.pickupLocation ? "border-red-500 focus-visible:ring-red-500" : ""}
-										disabled={loading}
-									/>
-									{fieldErrors.pickupLocation && (
-										<p className="text-xs text-red-500">{fieldErrors.pickupLocation}</p>
-									)}
-								</div>
+										<Label htmlFor="pickupLocation" className={fieldErrors.pickupLocation ? "text-red-500" : ""}>Τόπος Παραλαβής *</Label>
+										<Input
+											id="pickupLocation"
+											value={pickupLocation}
+											onChange={(e) => { setPickupLocation(e.target.value); clearError("pickupLocation"); }}
+											className={fieldErrors.pickupLocation ? "border-red-500 focus-visible:ring-red-500" : ""}
+											disabled={loading}
+										/>
+										{fieldErrors.pickupLocation && (
+											<p className="text-xs text-red-500">{fieldErrors.pickupLocation}</p>
+										)}
+									</div>
 
-								<div className="space-y-2">
-									<Label htmlFor="dropoffLocation" className={fieldErrors.dropoffLocation ? "text-red-500" : ""}>Τόπος Αποστολής *</Label>
-									<Input
-										id="dropoffLocation"
-										value={dropoffLocation}
-										onChange={(e) => { setDropoffLocation(e.target.value); clearError("dropoffLocation"); }}
-										className={fieldErrors.dropoffLocation ? "border-red-500 focus-visible:ring-red-500" : ""}
-										disabled={loading}
-									/>
-									{fieldErrors.dropoffLocation && (
-										<p className="text-xs text-red-500">{fieldErrors.dropoffLocation}</p>
-									)}
-								</div>
+									<div className="space-y-2">
+										<Label htmlFor="dropoffLocation" className={fieldErrors.dropoffLocation ? "text-red-500" : ""}>Τόπος Αποστολής *</Label>
+										<Input
+											id="dropoffLocation"
+											value={dropoffLocation}
+											onChange={(e) => { setDropoffLocation(e.target.value); clearError("dropoffLocation"); }}
+											className={fieldErrors.dropoffLocation ? "border-red-500 focus-visible:ring-red-500" : ""}
+											disabled={loading}
+										/>
+										{fieldErrors.dropoffLocation && (
+											<p className="text-xs text-red-500">{fieldErrors.dropoffLocation}</p>
+										)}
+									</div>
 
 									<div className="flex gap-6 items-end col-span-2">
 										<div className="space-y-2">
@@ -578,34 +577,34 @@ export default function BookingForm({
 								</CardHeader>
 								<CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-2">
 									<div className="space-y-2">
-									<Label htmlFor="customerName" className={fieldErrors.customerName ? "text-red-500" : ""}>Ονοματεπώνυμο *</Label>
-									<Input
-										id="customerName"
-										value={customerName}
-										onChange={(e) => { setCustomerName(e.target.value); clearError("customerName"); }}
-										className={fieldErrors.customerName ? "border-red-500 focus-visible:ring-red-500" : ""}
-										disabled={loading}
-									/>
-									{fieldErrors.customerName && (
-										<p className="text-xs text-red-500">{fieldErrors.customerName}</p>
-									)}
-								</div>
+										<Label htmlFor="customerName" className={fieldErrors.customerName ? "text-red-500" : ""}>Ονοματεπώνυμο *</Label>
+										<Input
+											id="customerName"
+											value={customerName}
+											onChange={(e) => { setCustomerName(e.target.value); clearError("customerName"); }}
+											className={fieldErrors.customerName ? "border-red-500 focus-visible:ring-red-500" : ""}
+											disabled={loading}
+										/>
+										{fieldErrors.customerName && (
+											<p className="text-xs text-red-500">{fieldErrors.customerName}</p>
+										)}
+									</div>
 
-								<div className="space-y-2">
-									<Label htmlFor="passengerCount" className={fieldErrors.passengerCount ? "text-red-500" : ""}>Αρ. Επιβατών *</Label>
-									<Input
-										id="passengerCount"
-										type="number"
-										min={1}
-										value={passengerCount}
-										onChange={(e) => { setPassengerCount(e.target.value); clearError("passengerCount"); }}
-										className={fieldErrors.passengerCount ? "border-red-500 focus-visible:ring-red-500" : ""}
-										disabled={loading}
-									/>
-									{fieldErrors.passengerCount && (
-										<p className="text-xs text-red-500">{fieldErrors.passengerCount}</p>
-									)}
-								</div>
+									<div className="space-y-2">
+										<Label htmlFor="passengerCount" className={fieldErrors.passengerCount ? "text-red-500" : ""}>Αρ. Επιβατών *</Label>
+										<Input
+											id="passengerCount"
+											type="number"
+											min={1}
+											value={passengerCount}
+											onChange={(e) => { setPassengerCount(e.target.value); clearError("passengerCount"); }}
+											className={fieldErrors.passengerCount ? "border-red-500 focus-visible:ring-red-500" : ""}
+											disabled={loading}
+										/>
+										{fieldErrors.passengerCount && (
+											<p className="text-xs text-red-500">{fieldErrors.passengerCount}</p>
+										)}
+									</div>
 
 									<div className="space-y-2">
 										<Label htmlFor="customerPhone">Τηλέφωνο</Label>
@@ -725,11 +724,11 @@ export default function BookingForm({
 															<p className="text-sm font-medium">
 																{booking!.vehicleId
 																	? (() => {
-																			const v = vehicles.find(
-																				(v) => v.id === booking!.vehicleId,
-																			);
-																			return v ? `${v.name} (${v.plate})` : "—";
-																		})()
+																		const v = vehicles.find(
+																			(v) => v.id === booking!.vehicleId,
+																		);
+																		return v ? `${v.name} (${v.plate})` : "—";
+																	})()
 																	: "—"}
 															</p>
 														</div>
@@ -781,22 +780,20 @@ export default function BookingForm({
 													<button
 														type="button"
 														onClick={() => setAssignMode("driver")}
-														className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-															assignMode === "driver"
+														className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${assignMode === "driver"
 																? "bg-[#f9cf44] text-[#333333]"
 																: "bg-[#333333] text-[#f9cf44] hover:bg-[#f9cf44] hover:text-[#333333]"
-														}`}
+															}`}
 													>
 														Οδηγός & Όχημα
 													</button>
 													<button
 														type="button"
 														onClick={() => setAssignMode("partner")}
-														className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-															assignMode === "partner"
+														className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${assignMode === "partner"
 																? "bg-[#f9cf44] text-[#333333]"
 																: "bg-[#333333] text-[#f9cf44] hover:bg-[#f9cf44] hover:text-[#333333]"
-														}`}
+															}`}
 													>
 														Συνεργάτης
 													</button>
@@ -928,14 +925,13 @@ export default function BookingForm({
 													</div>
 												)}
 
-											
+
 											</>
 										)}
 									</CardContent>
 								</Card>
 							)}
 
-							{error && <p className="text-sm text-destructive">{error}</p>}
 						</form>
 					</div>
 					<div className="flex-1 min-w-0 flex flex-col">
@@ -983,15 +979,15 @@ export default function BookingForm({
 															<span className="text-muted-foreground whitespace-nowrap">
 																{h.createdAt
 																	? new Date(h.createdAt).toLocaleString(
-																			"el-GR",
-																			{
-																				day: "2-digit",
-																				month: "2-digit",
-																				year: "numeric",
-																				hour: "2-digit",
-																				minute: "2-digit",
-																			},
-																		)
+																		"el-GR",
+																		{
+																			day: "2-digit",
+																			month: "2-digit",
+																			year: "numeric",
+																			hour: "2-digit",
+																			minute: "2-digit",
+																		},
+																	)
 																	: "—"}
 															</span>
 															<span className="font-medium">{h.action}</span>

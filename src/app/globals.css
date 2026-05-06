@@ -165,3 +165,11 @@
 ::-webkit-scrollbar-corner {
   background: transparent;
 }
+[data-sonner-toast][data-type="error"] {
+  border: 2px solid red !important;
+  font-size: 18px !important;
+}
+
+[data-sonner-toast][data-type="error"] [data-icon] svg {
+  color: red !important;
+}
