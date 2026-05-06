@@ -64,6 +64,13 @@
       "when": 1777966039163,
       "tag": "0008_stiff_stature",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1778056385438,
+      "tag": "0009_square_exiles",
+      "breakpoints": true
     }
   ]
 }

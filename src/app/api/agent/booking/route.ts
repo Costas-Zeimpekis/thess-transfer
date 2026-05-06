@@ -2,7 +2,11 @@ import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { verifyAgentRequest } from "@/lib/agent-auth";
 import { db } from "@/lib/db";
-import { bookingHistory, bookings, providerEmails } from "@/lib/db/schema";
+import { bookingHistory, bookings, providerEmails, systemLogs } from "@/lib/db/schema";
+
+async function logError(source: string, message: string, payload: unknown) {
+  await db.insert(systemLogs).values({ level: "error", source, message, payload });
+}
 
 async function resolveProviderId(
   provider_email?: string | null,
@@ -63,6 +67,27 @@ export async function POST(request: Request) {
   const resolvedProviderId = await resolveProviderId(provider_email, provider_id);
   const resolvedRef = provider_booking_ref ?? `AGENT-${Date.now()}`;
 
+  if (resolvedProviderId && resolvedRef) {
+    const duplicate = await db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(and(eq(bookings.providerId, resolvedProviderId), eq(bookings.providerBookingRef, resolvedRef)))
+      .limit(1);
+
+    if (duplicate.length > 0) {
+      await db.insert(systemLogs).values({
+        level: "warn",
+        source: "POST /api/agent/booking",
+        message: `Duplicate booking ref "${resolvedRef}" for provider id ${resolvedProviderId}`,
+        payload: body,
+      });
+      return NextResponse.json(
+        { error: `Booking ref "${resolvedRef}" already exists for this provider` },
+        { status: 409 },
+      );
+    }
+  }
+
   const result = await db
     .insert(bookings)
     .values({
@@ -102,41 +127,17 @@ export async function POST(request: Request) {
   return NextResponse.json(booking, { status: 201 });
 }
 
-// PUT — update booking fields by id
+// PUT — full replacement of a booking by id (same body as POST + id)
 export async function PUT(request: Request) {
   if (!(await verifyAgentRequest(request))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const body = await request.json();
-  const { id, ...fields } = body;
-
-  if (!id) {
-    return NextResponse.json({ error: "Missing booking id" }, { status: 400 });
-  }
-
-  const existing = await db
-    .select()
-    .from(bookings)
-    .where(eq(bookings.id, id))
-    .limit(1);
-
-  if (existing.length === 0) {
-    return NextResponse.json({ error: "Booking not found" }, { status: 404 });
-  }
-
-  const current = existing[0];
-
-  if (current.status === "completed" || current.status === "cancelled") {
-    return NextResponse.json(
-      { error: "Cannot update a completed or cancelled booking" },
-      { status: 409 },
-    );
-  }
-
   const {
     provider_email,
     provider_id,
+    provider_booking_ref,
     pickup_datetime,
     flight_number,
     pickup_location,
@@ -153,62 +154,129 @@ export async function PUT(request: Request) {
     real_price,
     declared_price,
     is_return_trip,
-  } = fields;
+  } = body;
 
-  const updateValues: Record<string, unknown> = { updatedAt: new Date() };
+  const missing = [
+    !provider_booking_ref && "provider_booking_ref",
+    (!provider_email && !provider_id) && "provider_email or provider_id",
+    !pickup_datetime && "pickup_datetime",
+    !pickup_location && "pickup_location",
+    !dropoff_location && "dropoff_location",
+    !vehicle_type && "vehicle_type",
+    !customer_name && "customer_name",
+    passenger_count === undefined && "passenger_count",
+    baby_seat === undefined && "baby_seat",
+    booster_seat === undefined && "booster_seat",
+    is_return_trip === undefined && "is_return_trip",
+  ].filter(Boolean);
+
+  if (missing.length > 0) {
+    return NextResponse.json(
+      { error: "Missing required fields", fields: missing },
+      { status: 400 },
+    );
+  }
+
+  const resolvedProviderId = await resolveProviderId(provider_email, provider_id);
+
+  if (!resolvedProviderId) {
+    await logError("PUT /api/agent/booking", `Provider not found for email "${provider_email}"`, body);
+    return NextResponse.json({ error: "Provider not found" }, { status: 404 });
+  }
+
+  const existing = await db
+    .select()
+    .from(bookings)
+    .where(and(eq(bookings.providerId, resolvedProviderId), eq(bookings.providerBookingRef, provider_booking_ref)))
+    .limit(1);
+
+  if (existing.length === 0) {
+    await logError("PUT /api/agent/booking", `Booking ref "${provider_booking_ref}" not found for provider id ${resolvedProviderId}`, body);
+    return NextResponse.json({ error: "Booking not found" }, { status: 404 });
+  }
+
+  const current = existing[0];
+
+  if (current.status === "completed" || current.status === "cancelled") {
+    await logError("PUT /api/agent/booking", `Cannot update booking #${current.id} with status "${current.status}"`, body);
+    return NextResponse.json(
+      { error: "Cannot update a completed or cancelled booking" },
+      { status: 409 },
+    );
+  }
+
+  const newValues = {
+    providerId: resolvedProviderId,
+    providerBookingRef: provider_booking_ref ?? current.providerBookingRef,
+    pickupDatetime: new Date(pickup_datetime),
+    flightNumber: flight_number ?? null,
+    pickupLocation: pickup_location,
+    dropoffLocation: dropoff_location,
+    passengerCount: passenger_count ?? 1,
+    vehicleType: vehicle_type,
+    babySeat: baby_seat ?? 0,
+    boosterSeat: booster_seat ?? 0,
+    customerName: customer_name,
+    customerPhone: customer_phone ?? null,
+    customerEmail: customer_email ?? null,
+    paymentMethod: payment_method ?? null,
+    notes: notes ?? null,
+    realPrice: real_price != null ? String(real_price) : null,
+    declaredPrice: declared_price != null ? String(declared_price) : null,
+    isReturnTrip: is_return_trip ?? false,
+    updatedAt: new Date(),
+  };
+
   const changes: Record<string, { from: unknown; to: unknown }> = {};
-
-  function track(key: string, dbKey: keyof typeof current, newVal: unknown) {
-    if (newVal === undefined) return;
+  const trackFields: Array<[string, keyof typeof current, unknown]> = [
+    ["provider_id", "providerId", newValues.providerId],
+    ["pickup_datetime", "pickupDatetime", newValues.pickupDatetime],
+    ["flight_number", "flightNumber", newValues.flightNumber],
+    ["pickup_location", "pickupLocation", newValues.pickupLocation],
+    ["dropoff_location", "dropoffLocation", newValues.dropoffLocation],
+    ["passenger_count", "passengerCount", newValues.passengerCount],
+    ["vehicle_type", "vehicleType", newValues.vehicleType],
+    ["baby_seat", "babySeat", newValues.babySeat],
+    ["booster_seat", "boosterSeat", newValues.boosterSeat],
+    ["customer_name", "customerName", newValues.customerName],
+    ["customer_phone", "customerPhone", newValues.customerPhone],
+    ["customer_email", "customerEmail", newValues.customerEmail],
+    ["payment_method", "paymentMethod", newValues.paymentMethod],
+    ["notes", "notes", newValues.notes],
+    ["real_price", "realPrice", newValues.realPrice],
+    ["declared_price", "declaredPrice", newValues.declaredPrice],
+    ["is_return_trip", "isReturnTrip", newValues.isReturnTrip],
+  ];
+  for (const [key, dbKey, newVal] of trackFields) {
     if (String(current[dbKey]) !== String(newVal)) {
       changes[key] = { from: current[dbKey], to: newVal };
     }
-    updateValues[dbKey] = newVal;
   }
 
-  if (provider_email !== undefined || provider_id !== undefined) {
-    const resolved = await resolveProviderId(provider_email, provider_id);
-    track("provider_id", "providerId", resolved);
-  }
-  track("pickup_datetime", "pickupDatetime", pickup_datetime ? new Date(pickup_datetime) : undefined);
-  track("flight_number", "flightNumber", flight_number ?? null);
-  track("pickup_location", "pickupLocation", pickup_location);
-  track("dropoff_location", "dropoffLocation", dropoff_location);
-  track("passenger_count", "passengerCount", passenger_count);
-  track("vehicle_type", "vehicleType", vehicle_type);
-  track("baby_seat", "babySeat", baby_seat);
-  track("booster_seat", "boosterSeat", booster_seat);
-  track("customer_name", "customerName", customer_name);
-  track("customer_phone", "customerPhone", customer_phone ?? null);
-  track("customer_email", "customerEmail", customer_email ?? null);
-  track("payment_method", "paymentMethod", payment_method ?? null);
-  track("notes", "notes", notes ?? null);
-  track("real_price", "realPrice", real_price != null ? String(real_price) : null);
-  track("declared_price", "declaredPrice", declared_price != null ? String(declared_price) : null);
-  track("is_return_trip", "isReturnTrip", is_return_trip);
+  const updatePayload: Record<string, unknown> = { ...newValues };
 
-  // Revert confirmed to pending if pickup is in the future (matches intake API behaviour)
+  // Revert confirmed to pending if pickup is in the future and something changed
   if (
     current.status === "confirmed" &&
     current.pickupDatetime > new Date() &&
     Object.keys(changes).length > 0
   ) {
-    updateValues.status = "pending";
-    updateValues.driverId = null;
-    updateValues.vehicleId = null;
-    updateValues.partnerId = null;
-    updateValues.partnerAssignmentPrice = null;
+    updatePayload.status = "pending";
+    updatePayload.driverId = null;
+    updatePayload.vehicleId = null;
+    updatePayload.partnerId = null;
+    updatePayload.partnerAssignmentPrice = null;
     changes.status = { from: current.status, to: "pending" };
   }
 
   const result = await db
     .update(bookings)
-    .set(updateValues)
-    .where(eq(bookings.id, id))
+    .set(updatePayload)
+    .where(eq(bookings.id, current.id))
     .returning();
 
   await db.insert(bookingHistory).values({
-    bookingId: id,
+    bookingId: current.id,
     action: "updated",
     source: "automatic",
     changedBy: null,
@@ -218,26 +286,36 @@ export async function PUT(request: Request) {
   return NextResponse.json(result[0]);
 }
 
-// PATCH — change status by id
+// PATCH — change status by provider_email + provider_booking_ref
 export async function PATCH(request: Request) {
   if (!(await verifyAgentRequest(request))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const body = await request.json();
-  const { id, status: newStatus } = body;
+  const { provider_email, provider_id, provider_booking_ref, status: newStatus } = body;
 
-  if (!id || !newStatus) {
-    return NextResponse.json({ error: "Missing id or status" }, { status: 400 });
+  if ((!provider_email && !provider_id) || !provider_booking_ref || !newStatus) {
+    return NextResponse.json(
+      { error: "Missing required fields: provider_email or provider_id, provider_booking_ref, status" },
+      { status: 400 },
+    );
+  }
+
+  const resolvedProviderId = await resolveProviderId(provider_email, provider_id);
+  if (!resolvedProviderId) {
+    await logError("PATCH /api/agent/booking", `Provider not found for email "${provider_email}"`, body);
+    return NextResponse.json({ error: "Provider not found" }, { status: 404 });
   }
 
   const existing = await db
     .select()
     .from(bookings)
-    .where(and(eq(bookings.id, id)))
+    .where(and(eq(bookings.providerId, resolvedProviderId), eq(bookings.providerBookingRef, provider_booking_ref)))
     .limit(1);
 
   if (existing.length === 0) {
+    await logError("PATCH /api/agent/booking", `Booking ref "${provider_booking_ref}" not found for provider id ${resolvedProviderId}`, body);
     return NextResponse.json({ error: "Booking not found" }, { status: 404 });
   }
 
@@ -249,6 +327,7 @@ export async function PATCH(request: Request) {
   };
 
   if (!(ALLOWED[current.status] ?? []).includes(newStatus)) {
+    await logError("PATCH /api/agent/booking", `Invalid status transition "${current.status}" → "${newStatus}" for booking #${current.id}`, body);
     return NextResponse.json(
       { error: "Transition not allowed" },
       { status: 400 },
@@ -266,11 +345,11 @@ export async function PATCH(request: Request) {
   const result = await db
     .update(bookings)
     .set(updateValues)
-    .where(eq(bookings.id, id))
+    .where(eq(bookings.id, current.id))
     .returning();
 
   await db.insert(bookingHistory).values({
-    bookingId: id,
+    bookingId: current.id,
     action: `status_changed_to_${newStatus}`,
     source: "automatic",
     changedBy: null,
