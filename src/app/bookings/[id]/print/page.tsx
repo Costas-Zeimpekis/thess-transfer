@@ -1,9 +1,40 @@
 import { notFound, redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
+import type { Metadata } from "next";
 import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { bookings, providers, drivers, vehicles, partners } from "@/lib/db/schema";
 import PrintActions from "./print-actions";
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+	const { id } = await params;
+	const bookingId = parseInt(id, 10);
+	if (Number.isNaN(bookingId)) return { title: "Κράτηση" };
+
+	const rows = await db
+		.select({
+			id: bookings.id,
+			customerName: bookings.customerName,
+			pickupDatetime: bookings.pickupDatetime,
+			providerBookingRef: bookings.providerBookingRef,
+		})
+		.from(bookings)
+		.where(eq(bookings.id, bookingId))
+		.limit(1);
+
+	const b = rows[0];
+	if (!b) return { title: "Κράτηση" };
+
+	const date = new Date(b.pickupDatetime).toLocaleDateString("el-GR", {
+		day: "2-digit",
+		month: "2-digit",
+		year: "numeric",
+	});
+	const ref = b.providerBookingRef ?? `#${b.id}`;
+	const title = `${ref} - ${b.customerName} - ${date}`;
+
+	return { title };
+}
 
 const STATUS_LABELS: Record<string, string> = {
 	pending: "Εκκρεμής",
