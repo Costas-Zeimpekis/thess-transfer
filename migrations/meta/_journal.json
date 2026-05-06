@@ -71,6 +71,13 @@
       "when": 1778056385438,
       "tag": "0009_square_exiles",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1778067508814,
+      "tag": "0010_windy_molecule_man",
+      "breakpoints": true
     }
   ]
 }

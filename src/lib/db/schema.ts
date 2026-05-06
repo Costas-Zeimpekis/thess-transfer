@@ -338,6 +338,16 @@ export const sessionsRelations = relations(sessions, ({ one }) => ({
 	}),
 }));
 
+// ─── Calendar Backups ─────────────────────────────────────────────────────────
+
+export const calendarBackups = pgTable("calendar_backups", {
+	id: serial("id").primaryKey(),
+	calendarId: varchar("calendar_id", { length: 200 }).notNull(),
+	eventsCount: integer("events_count").notNull().default(0),
+	icsContent: text("ics_content").notNull(),
+	createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+});
+
 // ─── System Logs ──────────────────────────────────────────────────────────────
 
 export const systemLogs = pgTable("system_logs", {

@@ -5,6 +5,7 @@ import {
 	Building2,
 	CalendarDays,
 	Car,
+	DatabaseBackup,
 	Handshake,
 	Receipt,
 	Settings,
@@ -23,6 +24,7 @@ const navItems = [
 	{ label: "Μικροέξοδα", href: "/micro-expenses", icon: Receipt },
 	{ label: "Ρυθμίσεις", href: "/settings", icon: Settings },
 	{ label: "Ειδοποιήσεις", href: "/notifications", icon: Bell },
+	{ label: "Αντίγραφα", href: "/backups", icon: DatabaseBackup },
 ];
 
 export default function Navigation() {
