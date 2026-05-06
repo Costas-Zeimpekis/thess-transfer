@@ -337,3 +337,15 @@ export const sessionsRelations = relations(sessions, ({ one }) => ({
 		references: [users.id],
 	}),
 }));
+
+// ─── System Logs ──────────────────────────────────────────────────────────────
+
+export const systemLogs = pgTable("system_logs", {
+	id: serial("id").primaryKey(),
+	level: varchar("level", { length: 20 }).notNull(),
+	source: varchar("source", { length: 200 }).notNull(),
+	message: text("message").notNull(),
+	payload: jsonb("payload"),
+	read: boolean("read").default(false).notNull(),
+	createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+});
