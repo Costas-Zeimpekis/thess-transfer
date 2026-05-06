@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { verifyAgentRequest } from "@/lib/agent-auth";
 import { db } from "@/lib/db";
@@ -47,7 +47,6 @@ export async function POST(request: Request) {
     payment_method,
     notes,
     real_price,
-    declared_price,
     is_return_trip,
   } = body;
 
@@ -65,27 +64,35 @@ export async function POST(request: Request) {
   }
 
   const resolvedProviderId = await resolveProviderId(provider_email, provider_id);
+
+  if ((provider_email || provider_id) && !resolvedProviderId) {
+    await logError("POST /api/agent/booking", `Provider not found for email "${provider_email}"`, body);
+    return NextResponse.json({ error: "Provider not found" }, { status: 404 });
+  }
+
   const resolvedRef = provider_booking_ref ?? `AGENT-${Date.now()}`;
 
-  if (resolvedProviderId && resolvedRef) {
-    const duplicate = await db
-      .select({ id: bookings.id })
-      .from(bookings)
-      .where(and(eq(bookings.providerId, resolvedProviderId), eq(bookings.providerBookingRef, resolvedRef)))
-      .limit(1);
+  const duplicateWhere = resolvedProviderId
+    ? and(eq(bookings.providerId, resolvedProviderId), eq(bookings.providerBookingRef, resolvedRef))
+    : and(isNull(bookings.providerId), eq(bookings.providerBookingRef, resolvedRef));
 
-    if (duplicate.length > 0) {
-      await db.insert(systemLogs).values({
-        level: "warn",
-        source: "POST /api/agent/booking",
-        message: `Duplicate booking ref "${resolvedRef}" for provider id ${resolvedProviderId}`,
-        payload: body,
-      });
-      return NextResponse.json(
-        { error: `Booking ref "${resolvedRef}" already exists for this provider` },
-        { status: 409 },
-      );
-    }
+  const duplicate = await db
+    .select({ id: bookings.id })
+    .from(bookings)
+    .where(duplicateWhere)
+    .limit(1);
+
+  if (duplicate.length > 0) {
+    await db.insert(systemLogs).values({
+      level: "warn",
+      source: "POST /api/agent/booking",
+      message: `Duplicate booking ref "${resolvedRef}" for provider id ${resolvedProviderId ?? "none"}`,
+      payload: body,
+    });
+    return NextResponse.json(
+      { error: `Booking ref "${resolvedRef}" already exists for this provider` },
+      { status: 409 },
+    );
   }
 
   const result = await db
@@ -109,7 +116,6 @@ export async function POST(request: Request) {
       paymentMethod: payment_method ?? null,
       notes: notes ?? null,
       realPrice: real_price != null ? String(real_price) : null,
-      declaredPrice: declared_price != null ? String(declared_price) : null,
       isReturnTrip: is_return_trip ?? false,
     })
     .returning();
@@ -152,7 +158,6 @@ export async function PUT(request: Request) {
     payment_method,
     notes,
     real_price,
-    declared_price,
     is_return_trip,
   } = body;
 
@@ -222,7 +227,6 @@ export async function PUT(request: Request) {
     paymentMethod: payment_method ?? null,
     notes: notes ?? null,
     realPrice: real_price != null ? String(real_price) : null,
-    declaredPrice: declared_price != null ? String(declared_price) : null,
     isReturnTrip: is_return_trip ?? false,
     updatedAt: new Date(),
   };
@@ -244,7 +248,6 @@ export async function PUT(request: Request) {
     ["payment_method", "paymentMethod", newValues.paymentMethod],
     ["notes", "notes", newValues.notes],
     ["real_price", "realPrice", newValues.realPrice],
-    ["declared_price", "declaredPrice", newValues.declaredPrice],
     ["is_return_trip", "isReturnTrip", newValues.isReturnTrip],
   ];
   for (const [key, dbKey, newVal] of trackFields) {
