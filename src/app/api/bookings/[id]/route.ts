@@ -10,6 +10,7 @@ import {
 	providers,
 	vehicles,
 } from "@/lib/db/schema";
+import { createBookingCalendarEvent } from "@/lib/google-calendar";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -246,7 +247,22 @@ export async function PUT(request: Request, context: RouteContext) {
 		changes,
 	});
 
-	return NextResponse.json(result[0]);
+	const updated = result[0];
+	const driverJustAssigned = updated.driverId != null && current.driverId !== updated.driverId;
+	const justConfirmed = current.status !== "confirmed" && updated.status === "confirmed";
+	if (updated.status === "confirmed" && updated.driverId && (justConfirmed || driverJustAssigned)) {
+		const driverRows = await db
+			.select({ googleCalendarId: drivers.googleCalendarId })
+			.from(drivers)
+			.where(eq(drivers.id, updated.driverId))
+			.limit(1);
+		const calId = driverRows[0]?.googleCalendarId;
+		if (calId) {
+			await createBookingCalendarEvent(calId, updated).catch(() => null);
+		}
+	}
+
+	return NextResponse.json(updated);
 }
 
 export async function PATCH(request: Request, context: RouteContext) {
@@ -311,6 +327,18 @@ export async function PATCH(request: Request, context: RouteContext) {
 		changedBy: session.user.id,
 		changes: { status: { from: current.status, to: newStatus } },
 	});
+
+	if (newStatus === "confirmed" && current.driverId) {
+		const driverRows = await db
+			.select({ googleCalendarId: drivers.googleCalendarId })
+			.from(drivers)
+			.where(eq(drivers.id, current.driverId))
+			.limit(1);
+		const calId = driverRows[0]?.googleCalendarId;
+		if (calId) {
+			await createBookingCalendarEvent(calId, result[0]).catch(() => null);
+		}
+	}
 
 	return NextResponse.json(result[0]);
 }

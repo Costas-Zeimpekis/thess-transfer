@@ -166,7 +166,7 @@ export default function DashboardShell({
 				</DialogContent>
 			</Dialog>
 		</TooltipProvider>
-		<Toaster position="top-right" closeButton closeOnClick={false} />
+		<Toaster position="top-right" closeButton />
 		</>
 	);
 }

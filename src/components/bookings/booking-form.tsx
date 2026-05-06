@@ -360,15 +360,7 @@ export default function BookingForm({
 						)}
 					</div>
 					<div className="flex gap-2">
-						{isEdit && booking?.id && (
-							<Link
-								href={`/bookings/${booking.id}/print`}
-								target="_blank"
-								className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-muted transition-colors"
-							>
-								Εκτύπωση / PDF
-							</Link>
-						)}
+
 						{actions}
 						{isEdit &&
 							statusTransitions.map((t) => (
@@ -386,6 +378,15 @@ export default function BookingForm({
 						<Button type="submit" form="booking-form" disabled={loading}>
 							{loading ? "Αποθήκευση…" : "Αποθήκευση"}
 						</Button>
+						{isEdit && booking?.id && (
+							<Link
+								href={`/bookings/${booking.id}/print`}
+								target="_blank"
+								className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-muted transition-colors"
+							>
+								Εκτύπωση / PDF
+							</Link>
+						)}
 					</div>
 				</div>
 				<div className="flex flex-row gap-6 w-full items-stretch">
@@ -781,8 +782,8 @@ export default function BookingForm({
 														type="button"
 														onClick={() => setAssignMode("driver")}
 														className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${assignMode === "driver"
-																? "bg-[#f9cf44] text-[#333333]"
-																: "bg-[#333333] text-[#f9cf44] hover:bg-[#f9cf44] hover:text-[#333333]"
+															? "bg-[#f9cf44] text-[#333333]"
+															: "bg-[#333333] text-[#f9cf44] hover:bg-[#f9cf44] hover:text-[#333333]"
 															}`}
 													>
 														Οδηγός & Όχημα
@@ -791,8 +792,8 @@ export default function BookingForm({
 														type="button"
 														onClick={() => setAssignMode("partner")}
 														className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${assignMode === "partner"
-																? "bg-[#f9cf44] text-[#333333]"
-																: "bg-[#333333] text-[#f9cf44] hover:bg-[#f9cf44] hover:text-[#333333]"
+															? "bg-[#f9cf44] text-[#333333]"
+															: "bg-[#333333] text-[#f9cf44] hover:bg-[#f9cf44] hover:text-[#333333]"
 															}`}
 													>
 														Συνεργάτης
