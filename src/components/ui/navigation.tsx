@@ -1,6 +1,7 @@
 "use client";
 
 import {
+	Bell,
 	Building2,
 	CalendarDays,
 	Car,
@@ -21,6 +22,7 @@ const navItems = [
 	{ label: "Πάροχοι", href: "/providers", icon: Building2 },
 	{ label: "Μικροέξοδα", href: "/micro-expenses", icon: Receipt },
 	{ label: "Ρυθμίσεις", href: "/settings", icon: Settings },
+	{ label: "Ειδοποιήσεις", href: "/notifications", icon: Bell },
 ];
 
 export default function Navigation() {
