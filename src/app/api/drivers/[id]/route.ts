@@ -32,7 +32,7 @@ export async function PUT(request: Request, { params }: Params) {
 
   const { id } = await params
   const body = await request.json()
-  const { full_name, id_card, drivers_license, tax_id, phone, email, active } = body
+  const { full_name, id_card, drivers_license, tax_id, phone, email, google_calendar_id, active } = body
 
   if (!full_name) {
     return NextResponse.json({ error: 'Το ονοματεπώνυμο είναι υποχρεωτικό' }, { status: 400 })
@@ -47,6 +47,7 @@ export async function PUT(request: Request, { params }: Params) {
       taxId: tax_id ?? null,
       phone: phone ?? null,
       email: email ?? null,
+      googleCalendarId: google_calendar_id ?? null,
       active: active ?? true,
       updatedAt: new Date(),
     })

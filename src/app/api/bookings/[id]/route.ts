@@ -258,7 +258,18 @@ export async function PUT(request: Request, context: RouteContext) {
 			.limit(1);
 		const calId = driverRows[0]?.googleCalendarId;
 		if (calId) {
-			await createBookingCalendarEvent(calId, updated).catch(() => null);
+			const calResult = await createBookingCalendarEvent(calId, updated)
+				.then((eventId) => ({ ok: true as const, eventId }))
+				.catch((err: Error) => ({ ok: false as const, error: err?.message ?? String(err) }));
+			await db.insert(bookingHistory).values({
+				bookingId,
+				action: calResult.ok ? "calendar_event_created" : "calendar_event_failed",
+				source: "automatic",
+				changedBy: session.user.id,
+				changes: calResult.ok
+					? { calendarId: calId, eventId: calResult.eventId }
+					: { calendarId: calId, error: calResult.error },
+			});
 		}
 	}
 
@@ -336,7 +347,18 @@ export async function PATCH(request: Request, context: RouteContext) {
 			.limit(1);
 		const calId = driverRows[0]?.googleCalendarId;
 		if (calId) {
-			await createBookingCalendarEvent(calId, result[0]).catch(() => null);
+			const calResult = await createBookingCalendarEvent(calId, result[0])
+				.then((eventId) => ({ ok: true as const, eventId }))
+				.catch((err: Error) => ({ ok: false as const, error: err?.message ?? String(err) }));
+			await db.insert(bookingHistory).values({
+				bookingId,
+				action: calResult.ok ? "calendar_event_created" : "calendar_event_failed",
+				source: "automatic",
+				changedBy: session.user.id,
+				changes: calResult.ok
+					? { calendarId: calId, eventId: calResult.eventId }
+					: { calendarId: calId, error: calResult.error },
+			});
 		}
 	}
 

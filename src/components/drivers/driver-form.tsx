@@ -2,10 +2,20 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from '@/components/ui/dialog'
 
 type DriverFormProps = {
   id?: string
@@ -21,8 +31,10 @@ export default function DriverForm({ id }: DriverFormProps) {
   const [taxId, setTaxId] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
+  const [googleCalendarId, setGoogleCalendarId] = useState('')
   const [active, setActive] = useState(true)
   const [loading, setLoading] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [fetching, setFetching] = useState(isEdit)
   const [error, setError] = useState('')
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
@@ -57,6 +69,7 @@ export default function DriverForm({ id }: DriverFormProps) {
         setTaxId(driver.taxId ?? '')
         setPhone(driver.phone ?? '')
         setEmail(driver.email ?? '')
+        setGoogleCalendarId(driver.googleCalendarId ?? '')
         setActive(driver.active ?? true)
       } catch {
         setError('Σφάλμα φόρτωσης δεδομένων.')
@@ -67,6 +80,23 @@ export default function DriverForm({ id }: DriverFormProps) {
 
     loadDriver()
   }, [id, isEdit])
+
+  async function handleDelete() {
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/drivers/${id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const data = await res.json()
+        setError(data.error ?? 'Σφάλμα διαγραφής.')
+        return
+      }
+      router.push('/drivers')
+    } catch {
+      setError('Σφάλμα διαγραφής.')
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -85,6 +115,7 @@ export default function DriverForm({ id }: DriverFormProps) {
           tax_id: taxId || null,
           phone: phone || null,
           email: email || null,
+          google_calendar_id: googleCalendarId || null,
           ...(isEdit && { active }),
         }),
       })
@@ -120,6 +151,32 @@ export default function DriverForm({ id }: DriverFormProps) {
         <h1 className="text-2xl font-semibold">
           {isEdit ? 'Επεξεργασία Οδηγού' : 'Νέος Οδηγός'}
         </h1>
+        {isEdit && (
+          <div className="ml-auto">
+            <Dialog>
+              <DialogTrigger render={<Button variant="destructive" size="sm" disabled={loading || deleting} />}>
+                <Trash2 className="h-4 w-4 mr-2" />
+                Διαγραφή
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Διαγραφή Οδηγού</DialogTitle>
+                  <DialogDescription>
+                    Είστε σίγουροι ότι θέλετε να διαγράψετε τον οδηγό <strong>{fullName}</strong>; Η ενέργεια αυτή δεν μπορεί να αναιρεθεί.
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <DialogClose render={<Button variant="outline" disabled={deleting} />}>
+                    Ακύρωση
+                  </DialogClose>
+                  <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+                    {deleting ? 'Διαγραφή...' : 'Διαγραφή'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+        )}
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -178,6 +235,17 @@ export default function DriverForm({ id }: DriverFormProps) {
             disabled={loading}
           />
           {fieldErrors.email && <p className="text-xs text-red-500">{fieldErrors.email}</p>}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="googleCalendarId">Google Calendar ID</Label>
+          <Input
+            id="googleCalendarId"
+            value={googleCalendarId}
+            onChange={(e) => setGoogleCalendarId(e.target.value)}
+            placeholder="xxxxx@group.calendar.google.com"
+            disabled={loading}
+          />
         </div>
 
         {isEdit && (
