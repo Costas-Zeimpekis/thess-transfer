@@ -370,6 +370,7 @@ export default function BookingsClient({
 			"Τρόπος Πληρωμής": b.paymentMethod ? (PAYMENT_METHOD_LABELS[b.paymentMethod] ?? b.paymentMethod) : "",
 			"Πραγματική Τιμή (€)": b.realPrice != null ? parseFloat(b.realPrice) : "",
 			"Δηλωθείσα Τιμή (€)": b.declaredPrice != null ? parseFloat(b.declaredPrice) : "",
+			"Διαφορά (€)": b.realPrice != null && b.declaredPrice != null ? parseFloat(b.realPrice) - parseFloat(b.declaredPrice) : "",
 			"Σημειώσεις": b.notes ?? "",
 		}));
 		const ws = XLSX.utils.json_to_sheet(rows);
