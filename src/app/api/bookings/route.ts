@@ -60,7 +60,9 @@ export async function GET(request: Request) {
 		conditions.push(gte(bookings.pickupDatetime, new Date(from)));
 	}
 	if (to) {
-		conditions.push(lte(bookings.pickupDatetime, new Date(to)));
+		const toDate = new Date(to);
+		toDate.setUTCHours(23, 59, 59, 999);
+		conditions.push(lte(bookings.pickupDatetime, toDate));
 	}
 	if (search) {
 		conditions.push(

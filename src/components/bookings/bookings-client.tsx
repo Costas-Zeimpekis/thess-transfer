@@ -681,6 +681,7 @@ export default function BookingsClient({
 								id="to"
 								type="date"
 								value={to}
+								min={from || undefined}
 								onChange={(e) => setTo(e.target.value)}
 								className="h-8 w-full bg-white text-[#333333]"
 							/>
