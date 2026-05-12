@@ -92,6 +92,7 @@ type BookingsClientProps = {
 const STATUS_LABELS: Record<string, string> = {
 	pending: "Εκκρεμείς",
 	confirmed: "Επιβεβαιωμένες",
+	assigned: "Ανατέθηκαν",
 	completed: "Ολοκληρωμένες",
 	cancelled: "Ακυρωμένες",
 };
@@ -116,6 +117,8 @@ function statusBadgeClass(status: string): string {
 			return "border-amber-400 text-amber-700 bg-amber-50";
 		case "confirmed":
 			return "bg-blue-100 text-blue-800 border-blue-200";
+		case "assigned":
+			return "bg-purple-100 text-purple-800 border-purple-200";
 		case "completed":
 			return "bg-green-100 text-green-800 border-green-200";
 		case "cancelled":
@@ -708,6 +711,7 @@ export default function BookingsClient({
 									<SelectItem value="all">Όλες</SelectItem>
 									<SelectItem value="pending">Εκκρεμείς</SelectItem>
 									<SelectItem value="confirmed">Επιβεβαιωμένες</SelectItem>
+									<SelectItem value="assigned">Ανατέθηκαν</SelectItem>
 									<SelectItem value="completed">Ολοκληρωμένες</SelectItem>
 									<SelectItem value="cancelled">Ακυρωμένες</SelectItem>
 								</SelectContent>

@@ -20,6 +20,7 @@ import {
 export const bookingStatusEnum = pgEnum("booking_status", [
 	"pending",
 	"confirmed",
+	"assigned",
 	"completed",
 	"cancelled",
 ]);

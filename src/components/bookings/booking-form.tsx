@@ -34,6 +34,7 @@ type HistoryEntry = {
 const STATUS_LABELS: Record<string, string> = {
 	pending: "Εκκρεμής",
 	confirmed: "Επιβεβαιωμένη",
+	assigned: "Ανατέθηκε",
 	completed: "Ολοκληρωμένη",
 	cancelled: "Ακυρωμένη",
 };
@@ -44,6 +45,8 @@ function statusClass(status: string): string {
 			return "border-amber-400 text-amber-700 bg-amber-50";
 		case "confirmed":
 			return "bg-blue-100 text-blue-800 border-blue-200";
+		case "assigned":
+			return "bg-purple-100 text-purple-800 border-purple-200";
 		case "completed":
 			return "bg-green-100 text-green-800 border-green-200";
 		case "cancelled":
@@ -146,11 +149,9 @@ export default function BookingForm({
 		});
 	}
 
-	function validate(): boolean {
-		// Pending bookings are drafts — skip validation
-		if (booking?.status === "pending") return true;
-
+	function validate(targetStatus?: string): boolean {
 		const errors: Record<string, string> = {};
+		const effectiveStatus = targetStatus ?? booking?.status;
 
 		if (bookingType === "provider") {
 			if (!providerId) errors.providerId = "Επιλέξτε πάροχο";
@@ -168,6 +169,24 @@ export default function BookingForm({
 		if (!passengerCount || parseInt(passengerCount, 10) < 1)
 			errors.passengerCount = "Συμπληρώστε αριθμό επιβατών";
 
+		if (isEdit && (effectiveStatus === "confirmed" || effectiveStatus === "assigned")) {
+			if (!customerPhone.trim()) errors.customerPhone = "Συμπληρώστε τηλέφωνο";
+			if (!customerEmail.trim()) errors.customerEmail = "Συμπληρώστε email";
+			if (!flightNumber.trim()) errors.flightNumber = "Συμπληρώστε αριθμό πτήσης";
+			if (!paymentMethod || paymentMethod === "none") errors.paymentMethod = "Επιλέξτε τρόπο πληρωμής";
+			if (!realPrice) errors.realPrice = "Συμπληρώστε πραγματική τιμή";
+		}
+
+		if (isEdit && effectiveStatus === "assigned") {
+			if (assignMode === "driver") {
+				if (!assignDriverId) errors.assignDriverId = "Επιλέξτε οδηγό";
+				if (!assignVehicleId) errors.assignVehicleId = "Επιλέξτε όχημα";
+			} else {
+				if (!assignPartnerId) errors.assignPartnerId = "Επιλέξτε συνεργάτη";
+				if (!assignPartnerPrice) errors.assignPartnerPrice = "Συμπληρώστε τιμή ανάθεσης";
+			}
+		}
+
 		setFieldErrors(errors);
 		return Object.keys(errors).length === 0;
 	}
@@ -179,7 +198,13 @@ export default function BookingForm({
 
 
 	async function transitionStatus(newStatus: string, confirmMsg?: string) {
+		if (newStatus === "confirmed" && !validate("confirmed")) return;
+		if (newStatus === "assigned" && !validate("assigned")) return;
 		if (confirmMsg && !confirm(confirmMsg)) return;
+
+		const saved = await saveBooking();
+		if (!saved) return;
+
 		setTransitioning(true);
 		try {
 			const res = await fetch(`/api/bookings/${booking!.id}`, {
@@ -226,30 +251,44 @@ export default function BookingForm({
 					{
 						label: "← Εκκρεμής",
 						status: "pending",
-						className: "variant-outline",
 						variant: "outline" as const,
 					},
 					{
-						label: "✓ Ολοκλήρωση",
-						status: "completed",
-						className: "bg-green-600 hover:bg-green-700 text-white border-0",
-						confirm: "Επιβεβαιώνετε την ολοκλήρωση της κράτησης;",
+						label: "Ανάθεση →",
+						status: "assigned",
+						className: "bg-purple-600 hover:bg-purple-700 text-white border-0",
 					},
 					{
 						label: "Ακύρωση κράτησης",
 						status: "cancelled",
 						className: "bg-red-600 hover:bg-red-700 text-white border-0",
-						confirm:
-							"Είστε σίγουρος ότι θέλετε να ακυρώσετε αυτή την κράτηση;",
+						confirm: "Είστε σίγουρος ότι θέλετε να ακυρώσετε αυτή την κράτηση;",
 					},
 				]
+				: booking?.status === "assigned"
+					? [
+						{
+							label: "← Επιβεβαιωμένη",
+							status: "confirmed",
+							variant: "outline" as const,
+						},
+						{
+							label: "✓ Ολοκλήρωση",
+							status: "completed",
+							className: "bg-green-600 hover:bg-green-700 text-white border-0",
+							confirm: "Επιβεβαιώνετε την ολοκλήρωση της κράτησης;",
+						},
+						{
+							label: "Ακύρωση κράτησης",
+							status: "cancelled",
+							className: "bg-red-600 hover:bg-red-700 text-white border-0",
+							confirm: "Είστε σίγουρος ότι θέλετε να ακυρώσετε αυτή την κράτηση;",
+						},
+					]
 				: [];
 
-	async function handleSubmit(e: React.FormEvent) {
-		e.preventDefault();
-		if (!validate()) return;
+	async function saveBooking(): Promise<boolean> {
 		setLoading(true);
-
 		try {
 			const url = isEdit ? `/api/bookings/${booking!.id}` : "/api/bookings";
 			const method = isEdit ? "PUT" : "POST";
@@ -283,18 +322,12 @@ export default function BookingForm({
 			if (isEdit && drivers && vehicles && partners) {
 				if (assignMode === "driver") {
 					body.driver_id = assignDriverId ? parseInt(assignDriverId, 10) : null;
-					body.vehicle_id = assignVehicleId
-						? parseInt(assignVehicleId, 10)
-						: null;
+					body.vehicle_id = assignVehicleId ? parseInt(assignVehicleId, 10) : null;
 					body.partner_id = null;
 					body.partner_assignment_price = null;
 				} else {
-					body.partner_id = assignPartnerId
-						? parseInt(assignPartnerId, 10)
-						: null;
-					body.partner_assignment_price = assignPartnerPrice
-						? parseFloat(assignPartnerPrice)
-						: null;
+					body.partner_id = assignPartnerId ? parseInt(assignPartnerId, 10) : null;
+					body.partner_assignment_price = assignPartnerPrice ? parseFloat(assignPartnerPrice) : null;
 					body.driver_id = null;
 					body.vehicle_id = null;
 				}
@@ -309,20 +342,28 @@ export default function BookingForm({
 			if (!res.ok) {
 				const data = await res.json();
 				toast.error(data.error ?? "Σφάλμα. Δοκιμάστε ξανά.", { duration: 10000 });
-				return;
+				return false;
 			}
 
-			if (isEdit) {
-				router.refresh();
-			} else {
+			if (!isEdit) {
 				const data = await res.json();
 				router.push(`/bookings/${data.id}`);
 			}
+
+			return true;
 		} catch {
 			toast.error("Σφάλμα. Δοκιμάστε ξανά.", { duration: 10000 });
+			return false;
 		} finally {
 			setLoading(false);
 		}
+	}
+
+	async function handleSubmit(e: React.FormEvent) {
+		e.preventDefault();
+		if (!validate()) return;
+		const ok = await saveBooking();
+		if (ok && isEdit) router.refresh();
 	}
 
 	return (
@@ -492,13 +533,15 @@ export default function BookingForm({
 									</div>
 
 									<div className="space-y-2">
-										<Label htmlFor="flightNumber">Αρ. Πτήσης</Label>
+										<Label htmlFor="flightNumber" className={fieldErrors.flightNumber ? "text-red-500" : ""}>Αρ. Πτήσης</Label>
 										<Input
 											id="flightNumber"
 											value={flightNumber}
-											onChange={(e) => setFlightNumber(e.target.value)}
+											onChange={(e) => { setFlightNumber(e.target.value); clearError("flightNumber"); }}
 											disabled={loading}
+											className={fieldErrors.flightNumber ? "border-red-500 focus-visible:ring-red-500" : ""}
 										/>
+										{fieldErrors.flightNumber && <p className="text-xs text-red-500">{fieldErrors.flightNumber}</p>}
 									</div>
 
 									<div className="space-y-2">
@@ -608,24 +651,28 @@ export default function BookingForm({
 									</div>
 
 									<div className="space-y-2">
-										<Label htmlFor="customerPhone">Τηλέφωνο</Label>
+										<Label htmlFor="customerPhone" className={fieldErrors.customerPhone ? "text-red-500" : ""}>Τηλέφωνο</Label>
 										<Input
 											id="customerPhone"
 											value={customerPhone}
-											onChange={(e) => setCustomerPhone(e.target.value)}
+											onChange={(e) => { setCustomerPhone(e.target.value); clearError("customerPhone"); }}
 											disabled={loading}
+											className={fieldErrors.customerPhone ? "border-red-500 focus-visible:ring-red-500" : ""}
 										/>
+										{fieldErrors.customerPhone && <p className="text-xs text-red-500">{fieldErrors.customerPhone}</p>}
 									</div>
 
 									<div className="space-y-2">
-										<Label htmlFor="customerEmail">Email</Label>
+										<Label htmlFor="customerEmail" className={fieldErrors.customerEmail ? "text-red-500" : ""}>Email</Label>
 										<Input
 											id="customerEmail"
 											type="email"
 											value={customerEmail}
-											onChange={(e) => setCustomerEmail(e.target.value)}
+											onChange={(e) => { setCustomerEmail(e.target.value); clearError("customerEmail"); }}
 											disabled={loading}
+											className={fieldErrors.customerEmail ? "border-red-500 focus-visible:ring-red-500" : ""}
 										/>
+										{fieldErrors.customerEmail && <p className="text-xs text-red-500">{fieldErrors.customerEmail}</p>}
 									</div>
 								</CardContent>
 							</Card>
@@ -640,13 +687,13 @@ export default function BookingForm({
 								</CardHeader>
 								<CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-3">
 									<div className="space-y-2">
-										<Label>Τρόπος Πληρωμής</Label>
+										<Label className={fieldErrors.paymentMethod ? "text-red-500" : ""}>Τρόπος Πληρωμής</Label>
 										<Select
 											value={paymentMethod}
-											onValueChange={(v) => setPaymentMethod(v ?? "none")}
+											onValueChange={(v) => { setPaymentMethod(v ?? "none"); clearError("paymentMethod"); }}
 											disabled={loading}
 										>
-											<SelectTrigger>
+											<SelectTrigger className={fieldErrors.paymentMethod ? "border-red-500 focus-visible:ring-red-500" : ""}>
 												<SelectValue />
 											</SelectTrigger>
 											<SelectContent>
@@ -660,19 +707,22 @@ export default function BookingForm({
 												<SelectItem value="paid">Πληρωμένο</SelectItem>
 											</SelectContent>
 										</Select>
+										{fieldErrors.paymentMethod && <p className="text-xs text-red-500">{fieldErrors.paymentMethod}</p>}
 									</div>
 
 									<div className="space-y-2">
-										<Label htmlFor="realPrice">Πραγματική Τιμή</Label>
+										<Label htmlFor="realPrice" className={fieldErrors.realPrice ? "text-red-500" : ""}>Πραγματική Τιμή</Label>
 										<Input
 											id="realPrice"
 											type="number"
 											step="0.01"
 											min="0"
 											value={realPrice}
-											onChange={(e) => setRealPrice(e.target.value)}
+											onChange={(e) => { setRealPrice(e.target.value); clearError("realPrice"); }}
 											disabled={loading}
+											className={fieldErrors.realPrice ? "border-red-500 focus-visible:ring-red-500" : ""}
 										/>
+										{fieldErrors.realPrice && <p className="text-xs text-red-500">{fieldErrors.realPrice}</p>}
 									</div>
 
 									<div className="space-y-2">
@@ -803,15 +853,13 @@ export default function BookingForm({
 												{assignMode === "driver" ? (
 													<div className="grid grid-cols-3 gap-4">
 														<div className="space-y-2">
-															<Label>Οδηγός</Label>
+															<Label className={fieldErrors.assignDriverId ? "text-red-500" : ""}>Οδηγός</Label>
 															<Select
 																value={assignDriverId}
-																onValueChange={(v) =>
-																	setAssignDriverId(v ?? "")
-																}
+																onValueChange={(v) => { setAssignDriverId(v ?? ""); clearError("assignDriverId"); }}
 																disabled={loading}
 															>
-																<SelectTrigger>
+																<SelectTrigger className={fieldErrors.assignDriverId ? "border-red-500" : ""}>
 																	<SelectValue placeholder="Επιλογή οδηγού">
 																		{(v) =>
 																			drivers?.find((d) => String(d.id) === v)
@@ -827,17 +875,16 @@ export default function BookingForm({
 																	))}
 																</SelectContent>
 															</Select>
+															{fieldErrors.assignDriverId && <p className="text-xs text-red-500">{fieldErrors.assignDriverId}</p>}
 														</div>
 														<div className="space-y-2">
-															<Label>Όχημα</Label>
+															<Label className={fieldErrors.assignVehicleId ? "text-red-500" : ""}>Όχημα</Label>
 															<Select
 																value={assignVehicleId}
-																onValueChange={(v) =>
-																	setAssignVehicleId(v ?? "")
-																}
+																onValueChange={(v) => { setAssignVehicleId(v ?? ""); clearError("assignVehicleId"); }}
 																disabled={loading}
 															>
-																<SelectTrigger>
+																<SelectTrigger className={fieldErrors.assignVehicleId ? "border-red-500 focus-visible:ring-red-500" : ""}>
 																	<SelectValue placeholder="Επιλογή οχήματος">
 																		{(v) => {
 																			const vh = vehicles?.find(
@@ -857,6 +904,7 @@ export default function BookingForm({
 																	))}
 																</SelectContent>
 															</Select>
+															{fieldErrors.assignVehicleId && <p className="text-xs text-red-500">{fieldErrors.assignVehicleId}</p>}
 														</div>
 														<div className="space-y-2">
 															<Label>Τύπος Οχήματος *</Label>
@@ -879,17 +927,15 @@ export default function BookingForm({
 														</div>
 													</div>
 												) : (
-													<div className="grid grid-cols-2 gap-4">
+													<div className="grid grid-cols-3 gap-4">
 														<div className="space-y-2">
-															<Label>Συνεργάτης</Label>
+															<Label className={fieldErrors.assignPartnerId ? "text-red-500" : ""}>Συνεργάτης</Label>
 															<Select
 																value={assignPartnerId}
-																onValueChange={(v) =>
-																	setAssignPartnerId(v ?? "")
-																}
+																onValueChange={(v) => { setAssignPartnerId(v ?? ""); clearError("assignPartnerId"); }}
 																disabled={loading}
 															>
-																<SelectTrigger>
+																<SelectTrigger className={fieldErrors.assignPartnerId ? "border-red-500" : ""}>
 																	<SelectValue placeholder="Επιλογή συνεργάτη">
 																		{(v) =>
 																			partners?.find((p) => String(p.id) === v)
@@ -905,9 +951,10 @@ export default function BookingForm({
 																	))}
 																</SelectContent>
 															</Select>
+															{fieldErrors.assignPartnerId && <p className="text-xs text-red-500">{fieldErrors.assignPartnerId}</p>}
 														</div>
 														<div className="space-y-2">
-															<Label htmlFor="assignPartnerPrice">
+															<Label htmlFor="assignPartnerPrice" className={fieldErrors.assignPartnerPrice ? "text-red-500" : ""}>
 																Τιμή Ανάθεσης
 															</Label>
 															<Input
@@ -916,12 +963,29 @@ export default function BookingForm({
 																step="0.01"
 																min="0"
 																value={assignPartnerPrice}
-																onChange={(e) =>
-																	setAssignPartnerPrice(e.target.value)
-																}
+																onChange={(e) => { setAssignPartnerPrice(e.target.value); clearError("assignPartnerPrice"); }}
 																disabled={loading}
 																placeholder="0.00"
+																className={fieldErrors.assignPartnerPrice ? "border-red-500 focus-visible:ring-red-500" : ""}
 															/>
+															{fieldErrors.assignPartnerPrice && <p className="text-xs text-red-500">{fieldErrors.assignPartnerPrice}</p>}
+														</div>
+														<div className="space-y-2">
+															<Label>Τύπος Οχήματος *</Label>
+															<Select
+																value={vehicleType}
+																onValueChange={(v) => setVehicleType(v ?? "car")}
+																disabled={loading}
+															>
+																<SelectTrigger>
+																	<SelectValue />
+																</SelectTrigger>
+																<SelectContent>
+																	<SelectItem value="car">Επιβατικό</SelectItem>
+																	<SelectItem value="van">Βανάκι</SelectItem>
+																	<SelectItem value="bus">Λεωφορείο</SelectItem>
+																</SelectContent>
+															</Select>
 														</div>
 													</div>
 												)}

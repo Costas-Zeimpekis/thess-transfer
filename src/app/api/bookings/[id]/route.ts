@@ -306,7 +306,8 @@ export async function PATCH(request: Request, context: RouteContext) {
 
 	const ALLOWED_TRANSITIONS: Record<string, string[]> = {
 		pending: ["confirmed", "cancelled"],
-		confirmed: ["pending", "completed", "cancelled"],
+		confirmed: ["assigned", "pending", "cancelled"],
+		assigned: ["confirmed", "completed", "cancelled"],
 	};
 
 	const allowed = ALLOWED_TRANSITIONS[current.status] ?? [];
