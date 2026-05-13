@@ -4,8 +4,11 @@ import { verifyAgentRequest } from "@/lib/agent-auth";
 import { db } from "@/lib/db";
 import { bookingHistory, bookings, providerEmails, systemLogs } from "@/lib/db/schema";
 
+async function log(level: string, source: string, message: string, payload: unknown) {
+  await db.insert(systemLogs).values({ level, source, message, payload });
+}
 async function logError(source: string, message: string, payload: unknown) {
-  await db.insert(systemLogs).values({ level: "error", source, message, payload });
+  await log("error", source, message, payload);
 }
 
 async function resolveProviderId(
@@ -25,6 +28,7 @@ async function resolveProviderId(
 // POST — create booking
 export async function POST(request: Request) {
   if (!(await verifyAgentRequest(request))) {
+    await log("error", "POST /api/agent/booking", "Unauthorized request — invalid or missing API key", { ip: request.headers.get("x-forwarded-for") });
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -83,12 +87,7 @@ export async function POST(request: Request) {
     .limit(1);
 
   if (duplicate.length > 0) {
-    await db.insert(systemLogs).values({
-      level: "warn",
-      source: "POST /api/agent/booking",
-      message: `Duplicate booking ref "${resolvedRef}" for provider id ${resolvedProviderId ?? "none"}`,
-      payload: body,
-    });
+    await log("error", "POST /api/agent/booking", `Duplicate booking ref "${resolvedRef}" for provider id ${resolvedProviderId ?? "none"} — rejected`, body);
     return NextResponse.json(
       { error: `Booking ref "${resolvedRef}" already exists for this provider` },
       { status: 409 },
@@ -130,12 +129,15 @@ export async function POST(request: Request) {
     changes: null,
   });
 
+  await log("info", "POST /api/agent/booking", `Booking #${booking.id} created (ref: ${booking.providerBookingRef})`, { bookingId: booking.id, ref: booking.providerBookingRef });
+
   return NextResponse.json(booking, { status: 201 });
 }
 
 // PUT — full replacement of a booking by id (same body as POST + id)
 export async function PUT(request: Request) {
   if (!(await verifyAgentRequest(request))) {
+    await log("error", "PUT /api/agent/booking", "Unauthorized request — invalid or missing API key", { ip: request.headers.get("x-forwarded-for") });
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -286,12 +288,15 @@ export async function PUT(request: Request) {
     changes,
   });
 
+  await log("info", "PUT /api/agent/booking", `Booking #${current.id} updated (ref: ${provider_booking_ref})`, { bookingId: current.id, changes });
+
   return NextResponse.json(result[0]);
 }
 
 // PATCH — change status by provider_email + provider_booking_ref
 export async function PATCH(request: Request) {
   if (!(await verifyAgentRequest(request))) {
+    await log("error", "PATCH /api/agent/booking", "Unauthorized request — invalid or missing API key", { ip: request.headers.get("x-forwarded-for") });
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -358,6 +363,8 @@ export async function PATCH(request: Request) {
     changedBy: null,
     changes: { status: { from: current.status, to: newStatus } },
   });
+
+  await log("info", "PATCH /api/agent/booking", `Booking #${current.id} status: ${current.status} → ${newStatus} (ref: ${provider_booking_ref})`, { bookingId: current.id, from: current.status, to: newStatus });
 
   return NextResponse.json(result[0]);
 }

@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { CheckCheck, ChevronDown, ChevronUp } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { CheckCheck, ChevronDown, ChevronUp, RotateCcw } from "lucide-react";
 import Navigation from "@/components/ui/navigation";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
 type Log = {
@@ -20,6 +22,23 @@ const LEVEL_STYLES: Record<string, string> = {
   error: "bg-red-100 text-red-700 border-red-300",
   warn: "bg-amber-100 text-amber-700 border-amber-300",
   info: "bg-blue-100 text-blue-700 border-blue-300",
+  success: "bg-green-100 text-green-700 border-green-300",
+};
+
+const LEVEL_LABELS: Record<string, string> = {
+  all: "Όλα",
+  info: "Info",
+  warn: "Warning",
+  error: "Error",
+  success: "Success",
+};
+
+const LEVEL_TAB_STYLES: Record<string, string> = {
+  all: "border-gray-300 text-gray-700 hover:bg-gray-50 data-[active=true]:bg-gray-100 data-[active=true]:border-gray-500",
+  info: "border-blue-300 text-blue-700 hover:bg-blue-50 data-[active=true]:bg-blue-100 data-[active=true]:border-blue-500",
+  warn: "border-amber-300 text-amber-700 hover:bg-amber-50 data-[active=true]:bg-amber-100 data-[active=true]:border-amber-500",
+  error: "border-red-300 text-red-700 hover:bg-red-50 data-[active=true]:bg-red-100 data-[active=true]:border-red-500",
+  success: "border-green-300 text-green-700 hover:bg-green-50 data-[active=true]:bg-green-100 data-[active=true]:border-green-500",
 };
 
 function fmt(val: string) {
@@ -40,12 +59,36 @@ export default function NotificationsPage() {
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [marking, setMarking] = useState(false);
 
-  useEffect(() => {
-    fetch("/api/notifications")
-      .then((r) => r.json())
-      .then((data) => setLogs(data))
-      .finally(() => setLoading(false));
+  const [level, setLevel] = useState("all");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+
+  const fetchLogs = useCallback(async (lvl: string, f: string, t: string) => {
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (lvl !== "all") params.set("level", lvl);
+    if (f) params.set("from", f);
+    if (t) params.set("to", t);
+    const res = await fetch(`/api/notifications?${params.toString()}`);
+    const data = await res.json();
+    setLogs(Array.isArray(data) ? data : []);
+    setLoading(false);
   }, []);
+
+  useEffect(() => {
+    void fetchLogs("all", "", "");
+  }, [fetchLogs]);
+
+  function applyFilters() {
+    void fetchLogs(level, from, to);
+  }
+
+  function resetFilters() {
+    setLevel("all");
+    setFrom("");
+    setTo("");
+    void fetchLogs("all", "", "");
+  }
 
   function toggleExpand(id: number) {
     setExpanded((prev) => {
@@ -97,12 +140,63 @@ export default function NotificationsPage() {
         )}
       </div>
 
-      {loading && (
-        <p className="text-sm text-muted-foreground">Φόρτωση...</p>
-      )}
+      {/* Filters */}
+      <div className="flex flex-col gap-4 p-4 border rounded-lg bg-gray-50">
+        {/* Level tabs */}
+        <div className="flex gap-2 flex-wrap">
+          {(["all", "info", "success", "warn", "error"] as const).map((lvl) => (
+            <button
+              key={lvl}
+              data-active={level === lvl}
+              onClick={() => setLevel(lvl)}
+              className={cn(
+                "px-3 py-1 rounded border text-xs font-semibold transition-colors",
+                LEVEL_TAB_STYLES[lvl],
+              )}
+            >
+              {LEVEL_LABELS[lvl]}
+            </button>
+          ))}
+        </div>
+
+        {/* Date range */}
+        <div className="flex gap-4 items-end flex-wrap">
+          <div className="space-y-1">
+            <Label className="text-xs">Από</Label>
+            <Input
+              type="date"
+              value={from}
+              onChange={(e) => setFrom(e.target.value)}
+              className="h-8 text-sm w-40"
+              max={to || undefined}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Έως</Label>
+            <Input
+              type="date"
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+              className="h-8 text-sm w-40"
+              min={from || undefined}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={applyFilters} className="h-8">
+              Εφαρμογή
+            </Button>
+            <Button size="sm" variant="outline" onClick={resetFilters} className="h-8 gap-1.5">
+              <RotateCcw className="h-3 w-3" />
+              Επαναφορά
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {loading && <p className="text-sm text-muted-foreground">Φόρτωση...</p>}
 
       {!loading && logs.length === 0 && (
-        <p className="text-sm text-muted-foreground">Δεν υπάρχουν ειδοποιήσεις.</p>
+        <p className="text-sm text-muted-foreground">Δεν βρέθηκαν ειδοποιήσεις.</p>
       )}
 
       <div className="flex flex-col gap-2">
