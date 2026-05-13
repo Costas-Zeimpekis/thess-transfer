@@ -57,12 +57,12 @@ export async function GET(request: Request) {
 		conditions.push(eq(bookings.partnerId, parseInt(partner)));
 	}
 	if (from) {
-		conditions.push(gte(bookings.pickupDatetime, new Date(from)));
+		conditions.push(gte(bookings.arrivalDatetime, new Date(from)));
 	}
 	if (to) {
 		const toDate = new Date(to);
 		toDate.setUTCHours(23, 59, 59, 999);
-		conditions.push(lte(bookings.pickupDatetime, toDate));
+		conditions.push(lte(bookings.arrivalDatetime, toDate));
 	}
 	if (search) {
 		conditions.push(
@@ -93,8 +93,10 @@ export async function GET(request: Request) {
 			providerName: providers.name,
 			status: bookings.status,
 			source: bookings.source,
-			pickupDatetime: bookings.pickupDatetime,
+			arrivalDatetime: bookings.arrivalDatetime,
 			flightNumber: bookings.flightNumber,
+			startTime: bookings.startTime,
+			endTime: bookings.endTime,
 			pickupLocation: bookings.pickupLocation,
 			dropoffLocation: bookings.dropoffLocation,
 			passengerCount: bookings.passengerCount,
@@ -129,7 +131,7 @@ export async function GET(request: Request) {
 		.leftJoin(vehiclesAlias, eq(bookings.vehicleId, vehiclesAlias.id))
 		.leftJoin(partnersAlias, eq(bookings.partnerId, partnersAlias.id))
 		.where(conditions.length > 0 ? and(...conditions) : undefined)
-		.orderBy(desc(bookings.pickupDatetime));
+		.orderBy(desc(bookings.arrivalDatetime));
 
 	// Compute totals in JS
 	let sumReal = 0;
@@ -164,6 +166,8 @@ export async function POST(request: Request) {
 		provider_id,
 		pickup_datetime,
 		flight_number,
+		start_time,
+		end_time,
 		pickup_location,
 		dropoff_location,
 		passenger_count,
@@ -235,8 +239,10 @@ export async function POST(request: Request) {
 			providerId: isProviderBooking ? provider_id : null,
 			status: "pending",
 			source: bookingSource,
-			pickupDatetime: new Date(pickup_datetime),
+			arrivalDatetime: new Date(pickup_datetime),
 			flightNumber: flight_number ?? null,
+			startTime: start_time ?? null,
+			endTime: end_time ?? null,
 			pickupLocation: pickup_location,
 			dropoffLocation: dropoff_location,
 			passengerCount: passenger_count ?? 1,

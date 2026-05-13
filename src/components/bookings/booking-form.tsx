@@ -11,7 +11,6 @@ import { Label } from "@/components/ui/label";
 import {
 	Select,
 	SelectContent,
-
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
@@ -87,12 +86,14 @@ export default function BookingForm({
 	const [bookingType, setBookingType] = useState<"provider" | "own">(
 		booking?.source === "manual" ? "own" : "provider",
 	);
-	const [pickupDatetime, setPickupDatetime] = useState(
-		booking?.pickupDatetime
-			? new Date(booking.pickupDatetime).toISOString().slice(0, 16)
+	const [arrivalDatetime, setPickupDatetime] = useState(
+		booking?.arrivalDatetime
+			? new Date(booking.arrivalDatetime).toISOString().slice(0, 16)
 			: "",
 	);
 	const [flightNumber, setFlightNumber] = useState(booking?.flightNumber ?? "");
+	const [startTime, setStartTime] = useState(booking?.startTime ?? "");
+	const [endTime, setEndTime] = useState(booking?.endTime ?? "");
 	const [pickupLocation, setPickupLocation] = useState(
 		booking?.pickupLocation ?? "",
 	);
@@ -113,7 +114,7 @@ export default function BookingForm({
 		booking?.customerEmail ?? "",
 	);
 	const [paymentMethod, setPaymentMethod] = useState(
-		booking?.paymentMethod ?? "none",
+		booking?.paymentMethod ?? "",
 	);
 	const [realPrice, setRealPrice] = useState(booking?.realPrice ?? "");
 	const [declaredPrice, setDeclaredPrice] = useState(
@@ -158,8 +159,8 @@ export default function BookingForm({
 			if (!providerBookingRef.trim())
 				errors.providerBookingRef = "Συμπληρώστε το Ref Παρόχου";
 		}
-		if (!pickupDatetime)
-			errors.pickupDatetime = "Συμπληρώστε ημερομηνία & ώρα παραλαβής";
+		if (!arrivalDatetime)
+			errors.arrivalDatetime = "Συμπληρώστε ημερομηνία άφιξης";
 		if (!pickupLocation.trim())
 			errors.pickupLocation = "Συμπληρώστε τόπο παραλαβής";
 		if (!dropoffLocation.trim())
@@ -173,11 +174,13 @@ export default function BookingForm({
 			if (!customerPhone.trim()) errors.customerPhone = "Συμπληρώστε τηλέφωνο";
 			if (!customerEmail.trim()) errors.customerEmail = "Συμπληρώστε email";
 			if (!flightNumber.trim()) errors.flightNumber = "Συμπληρώστε αριθμό πτήσης";
-			if (!paymentMethod || paymentMethod === "none") errors.paymentMethod = "Επιλέξτε τρόπο πληρωμής";
+			if (!paymentMethod) errors.paymentMethod = "Επιλέξτε τρόπο πληρωμής";
 			if (!realPrice) errors.realPrice = "Συμπληρώστε πραγματική τιμή";
 		}
 
 		if (isEdit && effectiveStatus === "assigned") {
+			if (!startTime) errors.startTime = "Συμπληρώστε ώρα έναρξης";
+			if (!endTime) errors.endTime = "Συμπληρώστε ώρα λήξης";
 			if (assignMode === "driver") {
 				if (!assignDriverId) errors.assignDriverId = "Επιλέξτε οδηγό";
 				if (!assignVehicleId) errors.assignVehicleId = "Επιλέξτε όχημα";
@@ -285,7 +288,7 @@ export default function BookingForm({
 							confirm: "Είστε σίγουρος ότι θέλετε να ακυρώσετε αυτή την κράτηση;",
 						},
 					]
-				: [];
+					: [];
 
 	async function saveBooking(): Promise<boolean> {
 		setLoading(true);
@@ -299,8 +302,10 @@ export default function BookingForm({
 					bookingType === "provider" ? providerBookingRef : null,
 				provider_id:
 					bookingType === "provider" ? parseInt(providerId, 10) : null,
-				pickup_datetime: pickupDatetime,
+				pickup_datetime: arrivalDatetime,
 				flight_number: flightNumber || null,
+				start_time: startTime || null,
+				end_time: endTime || null,
 				pickup_location: pickupLocation,
 				dropoff_location: dropoffLocation,
 				passenger_count: parseInt(passengerCount, 10),
@@ -310,7 +315,7 @@ export default function BookingForm({
 				customer_name: customerName,
 				customer_phone: customerPhone || null,
 				customer_email: customerEmail || null,
-				payment_method: paymentMethod === "none" ? null : paymentMethod,
+				payment_method: !paymentMethod ? null : paymentMethod,
 				notes: notes || null,
 				real_price: realPrice ? parseFloat(realPrice) : null,
 			};
@@ -370,7 +375,9 @@ export default function BookingForm({
 		<div className="w-full flex gap-6 items-start">
 			<div className="space-y-6 flex-1 min-w-0">
 				{/* Header */}
-				<div className="flex items-center justify-between bg-white p-4 rounded-xl">
+				<div className="flex items-center justify-between bg-white p-4 rounded-xl"
+					style={{ position: 'sticky', top: -26 }}
+				>
 					<div className="flex items-center gap-3">
 						<Link
 							href="/bookings"
@@ -385,19 +392,6 @@ export default function BookingForm({
 							<Badge variant="outline" className={statusClass(booking.status)}>
 								{STATUS_LABELS[booking.status] ?? booking.status}
 							</Badge>
-						)}
-						{isEdit && booking?.createdAt && (
-							<span className="text-xs text-muted-foreground">
-								{new Date(booking.createdAt).toLocaleString("el-GR", {
-									day: "2-digit",
-									month: "2-digit",
-									year: "numeric",
-									hour: "2-digit",
-									minute: "2-digit",
-									second: "2-digit",
-									hour12: false,
-								})}
-							</span>
 						)}
 					</div>
 					<div className="flex gap-2">
@@ -439,10 +433,17 @@ export default function BookingForm({
 							noValidate
 						>
 							{/* Στοιχεία Κράτησης */}
-							<Card className="h-[450px] overflow-auto">
+							<Card className="h-[500px] overflow-auto">
 								<CardHeader>
-									<CardTitle className="text-base text-black size-5 w-full font-semibold">
-										Στοιχεία Κράτησης
+									<CardTitle className="text-base text-black size-5 w-full font-semibold flex justify-between">
+										<span>Στοιχεία Κράτησης</span> 	{isEdit && booking?.createdAt && (
+											<p className="text-sm font-medium">Ημερομηνία Κατάρτισης
+												{new Date(booking.createdAt).toLocaleString("el-GR", {
+													day: "2-digit", month: "2-digit", year: "numeric",
+													hour: "2-digit", minute: "2-digit", hour12: false,
+												})}
+											</p>
+										)}
 									</CardTitle>
 									<hr className="border-b-2 border-b-[#f9cf44]" />
 								</CardHeader>
@@ -516,19 +517,19 @@ export default function BookingForm({
 									)}
 
 									<div className="space-y-2">
-										<Label htmlFor="pickupDatetime" className={fieldErrors.pickupDatetime ? "text-red-500" : ""}>
-											Ημερομηνία & Ώρα Παραλαβής *
+										<Label htmlFor="arrivalDatetime" className={fieldErrors.arrivalDatetime ? "text-red-500" : ""}>
+											Ημερομηνία Άφιξης *
 										</Label>
 										<Input
-											id="pickupDatetime"
+											id="arrivalDatetime"
 											type="datetime-local"
-											value={pickupDatetime}
-											onChange={(e) => { setPickupDatetime(e.target.value); clearError("pickupDatetime"); }}
-											className={fieldErrors.pickupDatetime ? "border-red-500 focus-visible:ring-red-500" : ""}
+											value={arrivalDatetime}
+											onChange={(e) => { setPickupDatetime(e.target.value); clearError("arrivalDatetime"); }}
+											className={fieldErrors.arrivalDatetime ? "border-red-500 focus-visible:ring-red-500" : ""}
 											disabled={loading}
 										/>
-										{fieldErrors.pickupDatetime && (
-											<p className="text-xs text-red-500">{fieldErrors.pickupDatetime}</p>
+										{fieldErrors.arrivalDatetime && (
+											<p className="text-xs text-red-500">{fieldErrors.arrivalDatetime}</p>
 										)}
 									</div>
 
@@ -542,6 +543,33 @@ export default function BookingForm({
 											className={fieldErrors.flightNumber ? "border-red-500 focus-visible:ring-red-500" : ""}
 										/>
 										{fieldErrors.flightNumber && <p className="text-xs text-red-500">{fieldErrors.flightNumber}</p>}
+									</div>
+
+									<div className="col-span-2 grid grid-cols-2 gap-4">
+										<div className="space-y-2">
+											<Label htmlFor="startTime" className={fieldErrors.startTime ? "text-red-500" : ""}>Ώρα Έναρξης</Label>
+											<Input
+												id="startTime"
+												type="time"
+												value={startTime}
+												onChange={(e) => { setStartTime(e.target.value); clearError("startTime"); }}
+												disabled={loading}
+												className={fieldErrors.startTime ? "border-red-500 focus-visible:ring-red-500" : ""}
+											/>
+											{fieldErrors.startTime && <p className="text-xs text-red-500">{fieldErrors.startTime}</p>}
+										</div>
+										<div className="space-y-2">
+											<Label htmlFor="endTime" className={fieldErrors.endTime ? "text-red-500" : ""}>Ώρα Λήξης</Label>
+											<Input
+												id="endTime"
+												type="time"
+												value={endTime}
+												onChange={(e) => { setEndTime(e.target.value); clearError("endTime"); }}
+												disabled={loading}
+												className={fieldErrors.endTime ? "border-red-500 focus-visible:ring-red-500" : ""}
+											/>
+											{fieldErrors.endTime && <p className="text-xs text-red-500">{fieldErrors.endTime}</p>}
+										</div>
 									</div>
 
 									<div className="space-y-2">
@@ -690,14 +718,14 @@ export default function BookingForm({
 										<Label className={fieldErrors.paymentMethod ? "text-red-500" : ""}>Τρόπος Πληρωμής</Label>
 										<Select
 											value={paymentMethod}
-											onValueChange={(v) => { setPaymentMethod(v ?? "none"); clearError("paymentMethod"); }}
+											onValueChange={(v) => { setPaymentMethod(v ?? ""); clearError("paymentMethod"); }}
 											disabled={loading}
 										>
 											<SelectTrigger className={fieldErrors.paymentMethod ? "border-red-500 focus-visible:ring-red-500" : ""}>
 												<SelectValue />
 											</SelectTrigger>
 											<SelectContent>
-												<SelectItem value="none">—</SelectItem>
+												<SelectItem value="">—</SelectItem>
 												<SelectItem value="cash">Μετρητά</SelectItem>
 												<SelectItem value="paypal">PayPal</SelectItem>
 												<SelectItem value="credit_card">

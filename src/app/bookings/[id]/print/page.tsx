@@ -15,7 +15,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 		.select({
 			id: bookings.id,
 			customerName: bookings.customerName,
-			pickupDatetime: bookings.pickupDatetime,
+			arrivalDatetime: bookings.arrivalDatetime,
 			providerBookingRef: bookings.providerBookingRef,
 		})
 		.from(bookings)
@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 	const b = rows[0];
 	if (!b) return { title: "Κράτηση" };
 
-	const date = new Date(b.pickupDatetime).toLocaleDateString("el-GR", {
+	const date = new Date(b.arrivalDatetime).toLocaleDateString("el-GR", {
 		day: "2-digit",
 		month: "2-digit",
 		year: "numeric",
@@ -96,8 +96,10 @@ export default async function BookingPrintPage({ params }: PageProps) {
 			providerBookingRef: bookings.providerBookingRef,
 			status: bookings.status,
 			source: bookings.source,
-			pickupDatetime: bookings.pickupDatetime,
+			arrivalDatetime: bookings.arrivalDatetime,
 			flightNumber: bookings.flightNumber,
+			startTime: bookings.startTime,
+			endTime: bookings.endTime,
 			pickupLocation: bookings.pickupLocation,
 			dropoffLocation: bookings.dropoffLocation,
 			passengerCount: bookings.passengerCount,
@@ -134,10 +136,6 @@ export default async function BookingPrintPage({ params }: PageProps) {
 	const b = rows[0];
 
 	const isPartnerAssigned = b.partnerId != null;
-	const priceDiff =
-		b.realPrice != null && b.declaredPrice != null
-			? parseFloat(b.realPrice) - parseFloat(b.declaredPrice)
-			: null;
 
 	return (
 		<div className="min-h-screen bg-gray-100 print:bg-white py-8 print:py-0">
@@ -145,7 +143,7 @@ export default async function BookingPrintPage({ params }: PageProps) {
 				<PrintActions />
 
 				{/* Header */}
-				<div className="flex items-start justify-between mb-8 pb-6 border-b-4 border-[#f9cf44]">
+				<div className="flex items-start justify-between mb-4 pb-4 border-b-4 border-[#f9cf44]">
 					<div>
 						<p className="text-2xl font-extrabold tracking-tight text-[#333333]">THESS TRANSFERS</p>
 						<p className="text-sm text-muted-foreground mt-1">Μεταφορές — Θεσσαλονίκη</p>
@@ -161,11 +159,21 @@ export default async function BookingPrintPage({ params }: PageProps) {
 					</div>
 				</div>
 
+				{/* Contract title */}
+				<div className="text-center mb-8">
+					<p className="text-xl font-extrabold tracking-widest text-[#333333] uppercase">ΜΙΣΘΩΤΗΡΙΟ ΣΥΜΒΟΛΑΙΟ</p>
+					<p className="text-sm font-semibold tracking-widest text-muted-foreground uppercase mt-0.5">RENTAL CONTRACT</p>
+				</div>
+
 				{/* Transport Details */}
 				<Section title="Στοιχεία Μεταφοράς">
 					<div className="grid grid-cols-2 gap-x-8 gap-y-3">
-						<Field label="Ημ/νία Παραλαβής" value={fmtDatetime(b.pickupDatetime)} />
+						<Field label="Ημερομηνία Κατάρτισης" value={fmtDatetime(b.createdAt)} />
+						<div />
+						<Field label="Ημ/νία Άφιξης" value={fmtDatetime(b.arrivalDatetime)} />
 						<Field label="Αριθμός Πτήσης" value={b.flightNumber ?? "—"} />
+						<Field label="Ώρα Έναρξης" value={b.startTime ?? "—"} />
+						<Field label="Ώρα Λήξης" value={b.endTime ?? "—"} />
 						<Field label="Σημείο Παραλαβής" value={b.pickupLocation} />
 						<Field label="Προορισμός" value={b.dropoffLocation} />
 					</div>
@@ -207,15 +215,8 @@ export default async function BookingPrintPage({ params }: PageProps) {
 
 				{/* Financials */}
 				<Section title="Οικονομικά">
-					<div className="grid grid-cols-4 gap-x-8 gap-y-3">
-						<Field label="Πραγματική Τιμή" value={fmt(b.realPrice)} />
+					<div className="grid grid-cols-2 gap-x-8 gap-y-3">
 						<Field label="Δηλωθείσα Τιμή" value={fmt(b.declaredPrice)} />
-						<Field
-							label="Διαφορά"
-							value={priceDiff != null ? `€${priceDiff.toFixed(2)}` : "—"}
-							valueClass={priceDiff != null && priceDiff < 0 ? "text-red-600 font-semibold" : ""}
-						/>
-						<Field label="Τρόπος Πληρωμής" value={b.paymentMethod ? (PAYMENT_METHOD_LABELS[b.paymentMethod] ?? b.paymentMethod) : "—"} />
 					</div>
 				</Section>
 

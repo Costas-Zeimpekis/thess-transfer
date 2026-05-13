@@ -17,7 +17,7 @@ type BookingForCalendar = {
   customerName: string;
   customerPhone: string | null;
   customerEmail: string | null;
-  pickupDatetime: Date;
+  arrivalDatetime: Date;
   pickupLocation: string;
   dropoffLocation: string;
   flightNumber: string | null;
@@ -60,7 +60,7 @@ export async function createBookingCalendarEvent(
 
   const description = lines.filter(Boolean).join("\n");
 
-  const start = new Date(booking.pickupDatetime);
+  const start = new Date(booking.arrivalDatetime);
   const end = new Date(start.getTime() + 60 * 60 * 1000);
 
   const result = await calendar.events.insert({

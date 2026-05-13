@@ -47,8 +47,10 @@ export type BookingRow = {
 	providerName: string;
 	status: "pending" | "confirmed" | "completed" | "cancelled";
 	source: string;
-	pickupDatetime: string;
+	arrivalDatetime: string;
 	flightNumber: string | null;
+	startTime: string | null;
+	endTime: string | null;
 	pickupLocation: string;
 	dropoffLocation: string;
 	passengerCount: number;
@@ -197,6 +199,7 @@ export default function BookingsClient({
 		declaredPrice: "0.00",
 		difference: "0.00",
 	});
+	const [fetchError, setFetchError] = useState<string | null>(null);
 	const [loading, setLoading] = useState(false);
 	const [sortCol, setSortCol] = useState<string | null>(null);
 	const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
@@ -237,9 +240,9 @@ export default function BookingsClient({
 					aVal = a.providerName;
 					bVal = b.providerName;
 					break;
-				case "pickupDatetime":
-					aVal = a.pickupDatetime;
-					bVal = b.pickupDatetime;
+				case "arrivalDatetime":
+					aVal = a.arrivalDatetime;
+					bVal = b.arrivalDatetime;
 					break;
 				case "customerName":
 					aVal = a.customerName;
@@ -300,7 +303,13 @@ export default function BookingsClient({
 				const data = await res.json();
 				setBookingsList(data.bookings);
 				setTotals(data.totals);
+				setFetchError(null);
+			} else {
+				const data = await res.json().catch(() => ({}));
+				setFetchError(data.error ?? `Σφάλμα ${res.status}`);
 			}
+		} catch (err) {
+			setFetchError(err instanceof Error ? err.message : "Σφάλμα φόρτωσης");
 		} finally {
 			setLoading(false);
 		}
@@ -362,7 +371,9 @@ export default function BookingsClient({
 			"Ref Παρόχου": b.providerBookingRef,
 			"Πάροχος": b.providerName,
 			"Ημ/νία Κράτησης": new Date(b.createdAt).toLocaleString("el-GR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }),
-			"Ημ/νία Παραλαβής": new Date(b.pickupDatetime).toLocaleString("el-GR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }),
+			"Ημ/νία Άφιξης": new Date(b.arrivalDatetime).toLocaleString("el-GR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }),
+			"Ώρα Έναρξης": b.startTime ?? "",
+			"Ώρα Λήξης": b.endTime ?? "",
 			"Πελάτης": b.customerName,
 			"Τηλέφωνο": b.customerPhone ?? "",
 			"Email": b.customerEmail ?? "",
@@ -415,12 +426,24 @@ export default function BookingsClient({
 			cell: (b) => <TableCell className="font-mono text-sm">{b.providerBookingRef}</TableCell>,
 			skeleton: <TableCell><Skeleton className="h-4 w-20" /></TableCell>,
 		},
-		pickupDatetime: {
+		arrivalDatetime: {
 			headClass: "font-extrabold cursor-pointer select-none",
-			onClick: () => handleSort("pickupDatetime"),
-			head: <div className="flex items-center gap-1">Ημ/νία Παραλαβής<SortIcon col="pickupDatetime" sortCol={sortCol} sortDir={sortDir} /></div>,
-			cell: (b) => <TableCell className="whitespace-nowrap">{new Date(b.pickupDatetime).toLocaleString("el-GR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}</TableCell>,
+			onClick: () => handleSort("arrivalDatetime"),
+			head: <div className="flex items-center gap-1">Ημ/νία Άφιξης<SortIcon col="arrivalDatetime" sortCol={sortCol} sortDir={sortDir} /></div>,
+			cell: (b) => <TableCell className="whitespace-nowrap">{new Date(b.arrivalDatetime).toLocaleString("el-GR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}</TableCell>,
 			skeleton: <TableCell><Skeleton className="h-4 w-32" /></TableCell>,
+		},
+		startTime: {
+			headClass: "font-extrabold",
+			head: <>Ώρα Έναρξης</>,
+			cell: (b) => <TableCell className="font-mono text-sm">{b.startTime ?? "—"}</TableCell>,
+			skeleton: <TableCell><Skeleton className="h-4 w-14" /></TableCell>,
+		},
+		endTime: {
+			headClass: "font-extrabold",
+			head: <>Ώρα Λήξης</>,
+			cell: (b) => <TableCell className="font-mono text-sm">{b.endTime ?? "—"}</TableCell>,
+			skeleton: <TableCell><Skeleton className="h-4 w-14" /></TableCell>,
 		},
 		assignment: {
 			headClass: "font-extrabold cursor-pointer select-none",
@@ -570,7 +593,14 @@ export default function BookingsClient({
 											))}
 										</TableRow>
 									))}
-								{!loading && sortedList.length === 0 && (
+								{!loading && fetchError && (
+									<TableRow>
+										<TableCell colSpan={colCount} className="text-center text-destructive py-8">
+											{fetchError}
+										</TableCell>
+									</TableRow>
+								)}
+								{!loading && !fetchError && sortedList.length === 0 && (
 									<TableRow>
 										<TableCell colSpan={colCount} className="text-center text-muted-foreground py-8">
 											Δεν βρέθηκαν κρατήσεις

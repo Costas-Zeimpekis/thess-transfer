@@ -162,10 +162,12 @@ export const bookings = pgTable(
 		status: bookingStatusEnum("status").notNull().default("pending"),
 
 		// Trip
-		pickupDatetime: timestamp("pickup_datetime", {
+		arrivalDatetime: timestamp("arrival_datetime", {
 			withTimezone: true,
 		}).notNull(),
 		flightNumber: varchar("flight_number", { length: 50 }),
+		startTime: varchar("start_time", { length: 5 }),
+		endTime: varchar("end_time", { length: 5 }),
 		pickupLocation: text("pickup_location").notNull(),
 		dropoffLocation: text("dropoff_location").notNull(),
 		passengerCount: integer("passenger_count").notNull().default(1),

@@ -1,0 +1,1 @@
+ALTER TABLE "bookings" RENAME COLUMN "pickup_datetime" TO "arrival_datetime";

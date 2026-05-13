@@ -32,8 +32,10 @@ export async function GET(_request: Request, context: RouteContext) {
 			providerName: providers.name,
 			status: bookings.status,
 			source: bookings.source,
-			pickupDatetime: bookings.pickupDatetime,
+			arrivalDatetime: bookings.arrivalDatetime,
 			flightNumber: bookings.flightNumber,
+		startTime: bookings.startTime,
+		endTime: bookings.endTime,
 			pickupLocation: bookings.pickupLocation,
 			dropoffLocation: bookings.dropoffLocation,
 			passengerCount: bookings.passengerCount,
@@ -119,6 +121,8 @@ export async function PUT(request: Request, context: RouteContext) {
 		provider_id,
 		pickup_datetime,
 		flight_number,
+		start_time,
+		end_time,
 		pickup_location,
 		dropoff_location,
 		passenger_count,
@@ -170,9 +174,13 @@ export async function PUT(request: Request, context: RouteContext) {
 		trackChange("providerBookingRef", provider_booking_ref);
 	if (provider_id !== undefined) trackChange("providerId", provider_id);
 	if (pickup_datetime !== undefined)
-		trackChange("pickupDatetime", new Date(pickup_datetime));
+		trackChange("arrivalDatetime", new Date(pickup_datetime));
 	if (flight_number !== undefined)
 		trackChange("flightNumber", flight_number ?? null);
+	if (start_time !== undefined)
+		trackChange("startTime", start_time ?? null);
+	if (end_time !== undefined)
+		trackChange("endTime", end_time ?? null);
 	if (pickup_location !== undefined)
 		trackChange("pickupLocation", pickup_location);
 	if (dropoff_location !== undefined)
@@ -303,6 +311,10 @@ export async function PATCH(request: Request, context: RouteContext) {
 	const current = existing[0];
 	const body = await request.json();
 	const { status: newStatus } = body;
+
+	if (current.status === newStatus) {
+		return NextResponse.json(current);
+	}
 
 	const ALLOWED_TRANSITIONS: Record<string, string[]> = {
 		pending: ["confirmed", "cancelled"],

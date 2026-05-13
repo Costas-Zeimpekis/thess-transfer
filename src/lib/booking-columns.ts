@@ -8,7 +8,9 @@ export const DEFAULT_BOOKING_COLUMNS: BookingColumn[] = [
 	{ key: "createdAt", label: "Ημ/νία Κράτησης", visible: true },
 	{ key: "providerName", label: "Πάροχος", visible: true },
 	{ key: "providerBookingRef", label: "Ref Παρόχου", visible: true },
-	{ key: "pickupDatetime", label: "Ημ/νία Παραλαβής", visible: true },
+	{ key: "arrivalDatetime", label: "Ημ/νία Άφιξης", visible: true },
+	{ key: "startTime", label: "Ώρα Έναρξης", visible: true },
+	{ key: "endTime", label: "Ώρα Λήξης", visible: true },
 	{ key: "assignment", label: "Ανάθεση", visible: true },
 	{ key: "vehicleType", label: "Τύπος Οχήματος", visible: true },
 	{ key: "vehicleName", label: "Όχημα", visible: true },
@@ -20,7 +22,7 @@ export const DEFAULT_BOOKING_COLUMNS: BookingColumn[] = [
 	{ key: "priceDiff", label: "Διαφορά", visible: true },
 ];
 
-const LS_KEY = "booking_columns_v1";
+const LS_KEY = "booking_columns_v2";
 
 export function loadBookingColumns(): BookingColumn[] {
 	if (typeof window === "undefined") return DEFAULT_BOOKING_COLUMNS;

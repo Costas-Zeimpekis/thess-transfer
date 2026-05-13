@@ -102,7 +102,7 @@ export async function POST(request: Request) {
       providerId: resolvedProviderId,
       source: "automatic",
       status: "pending",
-      pickupDatetime: new Date(pickup_datetime),
+      arrivalDatetime: new Date(pickup_datetime),
       flightNumber: flight_number ?? null,
       pickupLocation: pickup_location,
       dropoffLocation: dropoff_location,
@@ -213,7 +213,7 @@ export async function PUT(request: Request) {
   const newValues = {
     providerId: resolvedProviderId,
     providerBookingRef: provider_booking_ref ?? current.providerBookingRef,
-    pickupDatetime: new Date(pickup_datetime),
+    arrivalDatetime: new Date(pickup_datetime),
     flightNumber: flight_number ?? null,
     pickupLocation: pickup_location,
     dropoffLocation: dropoff_location,
@@ -234,7 +234,7 @@ export async function PUT(request: Request) {
   const changes: Record<string, { from: unknown; to: unknown }> = {};
   const trackFields: Array<[string, keyof typeof current, unknown]> = [
     ["provider_id", "providerId", newValues.providerId],
-    ["pickup_datetime", "pickupDatetime", newValues.pickupDatetime],
+    ["pickup_datetime", "arrivalDatetime", newValues.arrivalDatetime],
     ["flight_number", "flightNumber", newValues.flightNumber],
     ["pickup_location", "pickupLocation", newValues.pickupLocation],
     ["dropoff_location", "dropoffLocation", newValues.dropoffLocation],
@@ -261,7 +261,7 @@ export async function PUT(request: Request) {
   // Revert confirmed to pending if pickup is in the future and something changed
   if (
     current.status === "confirmed" &&
-    current.pickupDatetime > new Date() &&
+    current.arrivalDatetime > new Date() &&
     Object.keys(changes).length > 0
   ) {
     updatePayload.status = "pending";

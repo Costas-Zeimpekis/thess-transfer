@@ -29,8 +29,10 @@ export type BookingFormData = {
 	providerId: number | null;
 	source?: string;
 	status?: string;
-	pickupDatetime: string;
+	arrivalDatetime: string;
 	flightNumber: string | null;
+	startTime: string | null;
+	endTime: string | null;
 	pickupLocation: string;
 	dropoffLocation: string;
 	passengerCount: number;
@@ -62,7 +64,7 @@ type BookingSheetProps = {
 const EMPTY_FORM = {
 	providerBookingRef: "",
 	providerId: "",
-	pickupDatetime: "",
+	arrivalDatetime: "",
 	flightNumber: "",
 	pickupLocation: "",
 	dropoffLocation: "",
@@ -90,7 +92,7 @@ export default function BookingSheet({
 
 	const [providerBookingRef, setProviderBookingRef] = useState("");
 	const [providerId, setProviderId] = useState("");
-	const [pickupDatetime, setPickupDatetime] = useState("");
+	const [arrivalDatetime, setArrivalDatetime] = useState("");
 	const [flightNumber, setFlightNumber] = useState("");
 	const [pickupLocation, setPickupLocation] = useState("");
 	const [dropoffLocation, setDropoffLocation] = useState("");
@@ -114,8 +116,8 @@ export default function BookingSheet({
 		if (booking) {
 			setProviderBookingRef(booking.providerBookingRef ?? "");
 			setProviderId(booking.providerId ? String(booking.providerId) : "");
-			setPickupDatetime(
-				new Date(booking.pickupDatetime).toISOString().slice(0, 16),
+			setArrivalDatetime(
+				new Date(booking.arrivalDatetime).toISOString().slice(0, 16),
 			);
 			setFlightNumber(booking.flightNumber ?? "");
 			setPickupLocation(booking.pickupLocation);
@@ -134,7 +136,7 @@ export default function BookingSheet({
 		} else {
 			setProviderBookingRef(EMPTY_FORM.providerBookingRef);
 			setProviderId(EMPTY_FORM.providerId);
-			setPickupDatetime(EMPTY_FORM.pickupDatetime);
+			setArrivalDatetime(EMPTY_FORM.arrivalDatetime);
 			setFlightNumber(EMPTY_FORM.flightNumber);
 			setPickupLocation(EMPTY_FORM.pickupLocation);
 			setDropoffLocation(EMPTY_FORM.dropoffLocation);
@@ -168,7 +170,7 @@ export default function BookingSheet({
 			const body: Record<string, unknown> = {
 				provider_booking_ref: providerBookingRef,
 				provider_id: parseInt(providerId, 10),
-				pickup_datetime: pickupDatetime,
+				pickup_datetime: arrivalDatetime,
 				flight_number: flightNumber || null,
 				pickup_location: pickupLocation,
 				dropoff_location: dropoffLocation,
@@ -257,12 +259,12 @@ export default function BookingSheet({
 					</div>
 
 					<div className="space-y-2">
-						<Label htmlFor="pickupDatetime">Ημερομηνία & Ώρα Παραλαβής *</Label>
+						<Label htmlFor="arrivalDatetime">Ημερομηνία Άφιξης *</Label>
 						<Input
-							id="pickupDatetime"
+							id="arrivalDatetime"
 							type="datetime-local"
-							value={pickupDatetime}
-							onChange={(e) => setPickupDatetime(e.target.value)}
+							value={arrivalDatetime}
+							onChange={(e) => setArrivalDatetime(e.target.value)}
 							required
 							disabled={loading}
 						/>

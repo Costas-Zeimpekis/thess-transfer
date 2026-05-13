@@ -27,7 +27,7 @@ export default function NewBookingClient({
 
 	const [providerBookingRef, setProviderBookingRef] = useState("");
 	const [providerId, setProviderId] = useState("");
-	const [pickupDatetime, setPickupDatetime] = useState("");
+	const [arrivalDatetime, setPickupDatetime] = useState("");
 	const [flightNumber, setFlightNumber] = useState("");
 	const [pickupLocation, setPickupLocation] = useState("");
 	const [dropoffLocation, setDropoffLocation] = useState("");
@@ -58,7 +58,7 @@ export default function NewBookingClient({
 				body: JSON.stringify({
 					provider_booking_ref: providerBookingRef,
 					provider_id: parseInt(providerId, 10),
-					pickup_datetime: pickupDatetime,
+					pickup_datetime: arrivalDatetime,
 					flight_number: flightNumber || null,
 					pickup_location: pickupLocation,
 					dropoff_location: dropoffLocation,
@@ -136,11 +136,11 @@ export default function NewBookingClient({
 				</div>
 
 				<div className="space-y-2">
-					<Label htmlFor="pickupDatetime">Ημερομηνία & Ώρα Παραλαβής *</Label>
+					<Label htmlFor="arrivalDatetime">Ημερομηνία Άφιξης *</Label>
 					<Input
-						id="pickupDatetime"
+						id="arrivalDatetime"
 						type="datetime-local"
-						value={pickupDatetime}
+						value={arrivalDatetime}
 						onChange={(e) => setPickupDatetime(e.target.value)}
 						required
 						disabled={loading}
