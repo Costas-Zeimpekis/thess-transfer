@@ -297,7 +297,7 @@ export default function BookingForm({
 			const method = isEdit ? "PUT" : "POST";
 
 			const body: Record<string, unknown> = {
-				source: bookingType === "own" ? "manual" : "automatic",
+				source: "manual",
 				provider_booking_ref:
 					bookingType === "provider" ? providerBookingRef : null,
 				provider_id:
@@ -391,6 +391,11 @@ export default function BookingForm({
 						{isEdit && booking?.status && (
 							<Badge variant="outline" className={statusClass(booking.status)}>
 								{STATUS_LABELS[booking.status] ?? booking.status}
+							</Badge>
+						)}
+						{isEdit && booking?.source && (
+							<Badge variant="outline" className={booking.source === "manual" ? "bg-gray-100 text-gray-700 border-gray-300" : "bg-sky-100 text-sky-700 border-sky-300"}>
+								{booking.source === "manual" ? "Manual" : "Email"}
 							</Badge>
 						)}
 					</div>

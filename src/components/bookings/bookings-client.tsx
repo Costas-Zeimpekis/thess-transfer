@@ -268,6 +268,10 @@ export default function BookingsClient({
 					aVal = a.createdAt;
 					bVal = b.createdAt;
 					break;
+				case "source":
+					aVal = a.source;
+					bVal = b.source;
+					break;
 			}
 			if (aVal < bVal) return sortDir === "asc" ? -1 : 1;
 			if (aVal > bVal) return sortDir === "asc" ? 1 : -1;
@@ -425,6 +429,19 @@ export default function BookingsClient({
 			head: <div className="flex items-center gap-1">Ref Παρόχου<SortIcon col="providerBookingRef" sortCol={sortCol} sortDir={sortDir} /></div>,
 			cell: (b) => <TableCell className="font-mono text-sm">{b.providerBookingRef}</TableCell>,
 			skeleton: <TableCell><Skeleton className="h-4 w-20" /></TableCell>,
+		},
+		source: {
+			headClass: "font-extrabold cursor-pointer select-none",
+			onClick: () => handleSort("source"),
+			head: <div className="flex items-center gap-1">Πηγή<SortIcon col="source" sortCol={sortCol} sortDir={sortDir} /></div>,
+			cell: (b) => (
+				<TableCell>
+					<Badge variant="outline" className={b.source === "manual" ? "bg-gray-100 text-gray-700 border-gray-300" : "bg-sky-100 text-sky-700 border-sky-300"}>
+						{b.source === "manual" ? "Manual" : "Email"}
+					</Badge>
+				</TableCell>
+			),
+			skeleton: <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>,
 		},
 		arrivalDatetime: {
 			headClass: "font-extrabold cursor-pointer select-none",
@@ -780,8 +797,8 @@ export default function BookingsClient({
 								{(["all", "own", "provider"] as const).map((opt) => {
 									const labels = {
 										all: "Όλες",
-										own: "Δική μας",
-										provider: "Πάροχο",
+										own: "Manual",
+										provider: "Email",
 									};
 									return (
 										<button

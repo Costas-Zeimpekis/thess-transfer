@@ -98,6 +98,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
 					providerBookingRef: booking.providerBookingRef,
 					providerId: booking.providerId,
 					status: booking.status,
+					source: booking.source,
 					arrivalDatetime: booking.arrivalDatetime?.toISOString() ?? "",
 					flightNumber: booking.flightNumber,
 					startTime: booking.startTime,
