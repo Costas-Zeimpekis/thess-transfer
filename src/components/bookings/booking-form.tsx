@@ -297,7 +297,7 @@ export default function BookingForm({
 			const method = isEdit ? "PUT" : "POST";
 
 			const body: Record<string, unknown> = {
-				source: "manual",
+				source: isEdit ? booking!.source : "manual",
 				provider_booking_ref:
 					bookingType === "provider" ? providerBookingRef : null,
 				provider_id:
