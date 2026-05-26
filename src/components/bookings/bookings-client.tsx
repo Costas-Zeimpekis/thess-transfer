@@ -158,18 +158,50 @@ function SortIcon({
 }
 
 const FILTERS_KEY = "bookings-filters";
-const DEFAULT_APPLIED = {
-	from: "",
-	to: "",
-	status: "all",
-	bookingSource: "all" as "all" | "own" | "provider",
-	providerId: "all",
-	driverId: "all",
-	vehicleId: "all",
-	partnerId: "all",
-	paymentMethod: "all",
-	search: "",
+
+type AppliedFilters = {
+	from: string;
+	to: string;
+	status: string;
+	bookingSource: "all" | "own" | "provider";
+	providerId: string;
+	driverId: string;
+	vehicleId: string;
+	partnerId: string;
+	paymentMethod: string;
+	search: string;
+	pickupLocation: string;
+	dropoffLocation: string;
+	vehicleType: string;
 };
+
+function getTomorrow(): string {
+	const d = new Date();
+	d.setDate(d.getDate() + 1);
+	const y = d.getFullYear();
+	const m = String(d.getMonth() + 1).padStart(2, "0");
+	const day = String(d.getDate()).padStart(2, "0");
+	return `${y}-${m}-${day}`;
+}
+
+function getDefaultApplied(): AppliedFilters {
+	const tomorrow = getTomorrow();
+	return {
+		from: tomorrow,
+		to: tomorrow,
+		status: "all",
+		bookingSource: "all",
+		providerId: "all",
+		driverId: "all",
+		vehicleId: "all",
+		partnerId: "all",
+		paymentMethod: "all",
+		search: "",
+		pickupLocation: "",
+		dropoffLocation: "",
+		vehicleType: "all",
+	};
+}
 
 function readSaved(): Record<string, unknown> | null {
 	try {
@@ -187,27 +219,41 @@ export default function BookingsClient({
 }: BookingsClientProps) {
 	const router = useRouter();
 
-	const [savedFilters] = useState<Record<string, unknown> | null>(readSaved);
+	const [from, setFrom] = useState<string>(getTomorrow());
+	const [to, setTo] = useState<string>(getTomorrow());
+	const [status, setStatus] = useState<string>("all");
+	const [bookingSource, setBookingSource] = useState<"all" | "own" | "provider">("all");
+	const [providerId, setProviderId] = useState<string>("all");
+	const [driverId, setDriverId] = useState<string>("all");
+	const [vehicleId, setVehicleId] = useState<string>("all");
+	const [partnerId, setPartnerId] = useState<string>("all");
+	const [paymentMethod, setPaymentMethod] = useState<string>("all");
+	const [search, setSearch] = useState<string>("");
+	const [pickupLocation, setPickupLocation] = useState<string>("");
+	const [dropoffLocation, setDropoffLocation] = useState<string>("");
+	const [vehicleTypeFilter, setVehicleTypeFilter] = useState<string>("all");
+	const [assignmentTab, setAssignmentTab] = useState<"driver" | "partner">("driver");
+	const [applied, setApplied] = useState<AppliedFilters>(getDefaultApplied());
 
-	const [from, setFrom] = useState<string>((savedFilters?.from as string) ?? "");
-	const [to, setTo] = useState<string>((savedFilters?.to as string) ?? "");
-	const [status, setStatus] = useState<string>((savedFilters?.status as string) ?? "all");
-	const [bookingSource, setBookingSource] = useState<"all" | "own" | "provider">(
-		(savedFilters?.bookingSource as "all" | "own" | "provider") ?? "all",
-	);
-	const [providerId, setProviderId] = useState<string>((savedFilters?.providerId as string) ?? "all");
-	const [driverId, setDriverId] = useState<string>((savedFilters?.driverId as string) ?? "all");
-	const [vehicleId, setVehicleId] = useState<string>((savedFilters?.vehicleId as string) ?? "all");
-	const [partnerId, setPartnerId] = useState<string>((savedFilters?.partnerId as string) ?? "all");
-	const [paymentMethod, setPaymentMethod] = useState<string>((savedFilters?.paymentMethod as string) ?? "all");
-	const [search, setSearch] = useState<string>((savedFilters?.search as string) ?? "");
-	const [assignmentTab, setAssignmentTab] = useState<"driver" | "partner">(
-		(savedFilters?.assignmentTab as "driver" | "partner") ?? "driver",
-	);
-
-	const [applied, setApplied] = useState<typeof DEFAULT_APPLIED>(
-		(savedFilters?.applied as typeof DEFAULT_APPLIED) ?? DEFAULT_APPLIED,
-	);
+	useEffect(() => {
+		const saved = readSaved();
+		if (!saved) return;
+		if (saved.from !== undefined) setFrom(saved.from as string);
+		if (saved.to !== undefined) setTo(saved.to as string);
+		if (saved.status !== undefined) setStatus(saved.status as string);
+		if (saved.bookingSource !== undefined) setBookingSource(saved.bookingSource as "all" | "own" | "provider");
+		if (saved.providerId !== undefined) setProviderId(saved.providerId as string);
+		if (saved.driverId !== undefined) setDriverId(saved.driverId as string);
+		if (saved.vehicleId !== undefined) setVehicleId(saved.vehicleId as string);
+		if (saved.partnerId !== undefined) setPartnerId(saved.partnerId as string);
+		if (saved.paymentMethod !== undefined) setPaymentMethod(saved.paymentMethod as string);
+		if (saved.search !== undefined) setSearch(saved.search as string);
+		if (saved.pickupLocation !== undefined) setPickupLocation(saved.pickupLocation as string);
+		if (saved.dropoffLocation !== undefined) setDropoffLocation(saved.dropoffLocation as string);
+		if (saved.vehicleType !== undefined) setVehicleTypeFilter(saved.vehicleType as string);
+		if (saved.assignmentTab !== undefined) setAssignmentTab(saved.assignmentTab as "driver" | "partner");
+		if (saved.applied !== undefined) setApplied({ ...getDefaultApplied(), ...(saved.applied as AppliedFilters) });
+	}, []);
 
 	const [bookingsList, setBookingsList] = useState<BookingRow[]>([]);
 	const [totals, setTotals] = useState<Totals>({
@@ -318,6 +364,9 @@ export default function BookingsClient({
 			if (filters.from) params.set("from", filters.from);
 			if (filters.to) params.set("to", filters.to);
 			if (filters.search) params.set("search", filters.search);
+			if (filters.pickupLocation) params.set("pickupLocation", filters.pickupLocation);
+			if (filters.dropoffLocation) params.set("dropoffLocation", filters.dropoffLocation);
+			if (filters.vehicleType && filters.vehicleType !== "all") params.set("vehicleType", filters.vehicleType);
 			const res = await fetch(`/api/bookings?${params.toString()}`);
 			if (res.ok) {
 				const data = await res.json();
@@ -341,22 +390,14 @@ export default function BookingsClient({
 
 	function handleApply() {
 		setPage(1);
-		setApplied({
-			from,
-			to,
-			status,
-			bookingSource,
-			providerId,
-			driverId,
-			vehicleId,
-			partnerId,
-			paymentMethod,
-			search,
-		});
+		const next = { from, to, status, bookingSource, providerId, driverId, vehicleId, partnerId, paymentMethod, search, pickupLocation, dropoffLocation, vehicleType: vehicleTypeFilter };
+		try { sessionStorage.setItem(FILTERS_KEY, JSON.stringify({ ...next, assignmentTab, applied: next })); } catch { /* ignore */ }
+		setApplied(next);
 	}
 
 	function handleReset() {
 		setPage(1);
+		try { sessionStorage.removeItem(FILTERS_KEY); } catch { /* ignore */ }
 		setFrom("");
 		setTo("");
 		setStatus("all");
@@ -368,18 +409,10 @@ export default function BookingsClient({
 		setPaymentMethod("all");
 		setSearch("");
 		setAssignmentTab("driver");
-		setApplied({
-			from: "",
-			to: "",
-			status: "all",
-			bookingSource: "all" as "all" | "own" | "provider",
-			providerId: "all",
-			driverId: "all",
-			vehicleId: "all",
-			partnerId: "all",
-			paymentMethod: "all",
-			search: "",
-		});
+		setPickupLocation("");
+		setDropoffLocation("");
+		setVehicleTypeFilter("all");
+		setApplied({ from: "", to: "", status: "all", bookingSource: "all", providerId: "all", driverId: "all", vehicleId: "all", partnerId: "all", paymentMethod: "all", search: "", pickupLocation: "", dropoffLocation: "", vehicleType: "all" });
 	}
 
 	function handleExport() {
@@ -569,6 +602,9 @@ export default function BookingsClient({
 		applied.partnerId !== "all",
 		applied.paymentMethod !== "all",
 		applied.search !== "",
+		applied.pickupLocation !== "",
+		applied.dropoffLocation !== "",
+		applied.vehicleType !== "all",
 	].filter(Boolean).length;
 
 	return (
@@ -977,6 +1013,44 @@ export default function BookingsClient({
 									</Select>
 								</div>
 							)}
+						</div>
+
+						<div className="space-y-1">
+							<Label className="text-xs">Τόπος Αναχώρησης</Label>
+							<Input
+								placeholder="Αναζήτηση…"
+								className="h-8 w-full bg-white text-[#333]"
+								value={pickupLocation}
+								onChange={(e) => setPickupLocation(e.target.value)}
+								onKeyDown={(e) => { if (e.key === "Enter") handleApply(); }}
+							/>
+						</div>
+
+						<div className="space-y-1">
+							<Label className="text-xs">Τόπος Προορισμού</Label>
+							<Input
+								placeholder="Αναζήτηση…"
+								className="h-8 w-full bg-white text-[#333]"
+								value={dropoffLocation}
+								onChange={(e) => setDropoffLocation(e.target.value)}
+								onKeyDown={(e) => { if (e.key === "Enter") handleApply(); }}
+							/>
+						</div>
+
+						<div className="space-y-1">
+							<Label className="text-xs">Είδος Οχήματος</Label>
+							<div className="grid grid-cols-2 rounded-md overflow-hidden border border-[#f9cf44]">
+								{(["all", "car", "van", "bus"] as const).map((opt) => (
+									<button
+										key={opt}
+										type="button"
+										onClick={() => setVehicleTypeFilter(opt)}
+										className={`py-1 text-xs font-medium transition-colors ${vehicleTypeFilter === opt ? "bg-[#f9cf44] text-[#333333]" : "text-[#f9cf44] hover:bg-[#f9cf44]/20"}`}
+									>
+										{{ all: "Όλα", car: "Επιβατικό", van: "Βανάκι", bus: "Λεωφορείο" }[opt]}
+									</button>
+								))}
+							</div>
 						</div>
 
 						<div className="flex flex-col gap-2 pt-1 mt-auto">

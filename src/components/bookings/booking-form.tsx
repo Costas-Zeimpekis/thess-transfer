@@ -16,7 +16,10 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import { type BookingFormData } from "./booking-sheet";
 
 type Provider = { id: number; name: string };
@@ -55,6 +58,18 @@ function statusClass(status: string): string {
 	}
 }
 
+function timeStrToDate(t: string): Date | null {
+	if (!t) return null;
+	const [h, m] = t.split(":").map(Number);
+	const d = new Date();
+	d.setHours(h, m, 0, 0);
+	return d;
+}
+
+function dateToTimeStr(d: Date): string {
+	return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
 type BookingFormProps = {
 	booking?: BookingFormData | null;
 	providers: Provider[];
@@ -86,11 +101,16 @@ export default function BookingForm({
 	const [bookingType, setBookingType] = useState<"provider" | "own">(
 		booking?.source === "manual" ? "own" : "provider",
 	);
-	const [arrivalDatetime, setPickupDatetime] = useState(
-		booking?.arrivalDatetime
-			? new Date(booking.arrivalDatetime).toISOString().slice(0, 16)
-			: "",
-	);
+	const [arrivalDatetime, setPickupDatetime] = useState(() => {
+		if (!booking?.arrivalDatetime) return "";
+		const d = new Date(booking.arrivalDatetime);
+		const y = d.getFullYear();
+		const mo = String(d.getMonth() + 1).padStart(2, "0");
+		const day = String(d.getDate()).padStart(2, "0");
+		const h = String(d.getHours()).padStart(2, "0");
+		const min = String(d.getMinutes()).padStart(2, "0");
+		return `${y}-${mo}-${day}T${h}:${min}`;
+	});
 	const [flightNumber, setFlightNumber] = useState(booking?.flightNumber ?? "");
 	const [startTime, setStartTime] = useState(booking?.startTime ?? "");
 	const [endTime, setEndTime] = useState(booking?.endTime ?? "");
@@ -518,13 +538,32 @@ export default function BookingForm({
 										<Label htmlFor="arrivalDatetime" className={fieldErrors.arrivalDatetime ? "text-red-500" : ""}>
 											Ημερομηνία Άφιξης *
 										</Label>
-										<Input
-											id="arrivalDatetime"
-											type="datetime-local"
-											value={arrivalDatetime}
-											onChange={(e) => { setPickupDatetime(e.target.value); clearError("arrivalDatetime"); }}
-											className={fieldErrors.arrivalDatetime ? "border-red-500 focus-visible:ring-red-500" : ""}
+										<DatePicker
+											selected={arrivalDatetime ? new Date(arrivalDatetime) : null}
+											onChange={(date: Date | null) => {
+												if (!date) { setPickupDatetime(""); clearError("arrivalDatetime"); return; }
+												const y = date.getFullYear();
+												const mo = String(date.getMonth() + 1).padStart(2, "0");
+												const day = String(date.getDate()).padStart(2, "0");
+												const h = String(date.getHours()).padStart(2, "0");
+												const min = String(date.getMinutes()).padStart(2, "0");
+												setPickupDatetime(`${y}-${mo}-${day}T${h}:${min}`);
+												clearError("arrivalDatetime");
+											}}
+											showTimeSelect
+											timeFormat="HH:mm"
+											timeIntervals={15}
+											dateFormat="dd/MM/yyyy HH:mm"
+											timeCaption="Ώρα"
+											placeholderText="ΗΗ/ΜΜ/ΕΕΕΕ ΩΩ:ΛΛ"
 											disabled={loading}
+											id="arrivalDatetime"
+											className={cn(
+												"flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
+												fieldErrors.arrivalDatetime ? "border-red-500 focus-visible:ring-red-500" : ""
+											)}
+											wrapperClassName="w-full"
+											popperPlacement="bottom-start"
 										/>
 										{fieldErrors.arrivalDatetime && (
 											<p className="text-xs text-red-500">{fieldErrors.arrivalDatetime}</p>
@@ -858,25 +897,39 @@ export default function BookingForm({
 													)}
 													<div className="space-y-2">
 														<Label htmlFor="startTime" className={fieldErrors.startTime ? "text-red-500" : ""}>Ώρα Έναρξης</Label>
-														<Input
-															id="startTime"
-															type="time"
-															value={startTime}
-															onChange={(e) => { setStartTime(e.target.value); clearError("startTime"); }}
+														<DatePicker
+															selected={timeStrToDate(startTime)}
+															onChange={(date: Date | null) => { setStartTime(date ? dateToTimeStr(date) : ""); clearError("startTime"); }}
+															showTimeSelect
+															showTimeSelectOnly
+															timeIntervals={15}
+															timeFormat="HH:mm"
+															dateFormat="HH:mm"
+															timeCaption="Ώρα"
+															placeholderText="ΩΩ:ΛΛ"
 															disabled={loading}
-															className={fieldErrors.startTime ? "border-red-500 focus-visible:ring-red-500" : ""}
+															id="startTime"
+															className={cn("flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50", fieldErrors.startTime ? "border-red-500 focus-visible:ring-red-500" : "")}
+															wrapperClassName="w-full"
 														/>
 														{fieldErrors.startTime && <p className="text-xs text-red-500">{fieldErrors.startTime}</p>}
 													</div>
 													<div className="space-y-2">
 														<Label htmlFor="endTime" className={fieldErrors.endTime ? "text-red-500" : ""}>Ώρα Λήξης</Label>
-														<Input
-															id="endTime"
-															type="time"
-															value={endTime}
-															onChange={(e) => { setEndTime(e.target.value); clearError("endTime"); }}
+														<DatePicker
+															selected={timeStrToDate(endTime)}
+															onChange={(date: Date | null) => { setEndTime(date ? dateToTimeStr(date) : ""); clearError("endTime"); }}
+															showTimeSelect
+															showTimeSelectOnly
+															timeIntervals={15}
+															timeFormat="HH:mm"
+															dateFormat="HH:mm"
+															timeCaption="Ώρα"
+															placeholderText="ΩΩ:ΛΛ"
 															disabled={loading}
-															className={fieldErrors.endTime ? "border-red-500 focus-visible:ring-red-500" : ""}
+															id="endTime"
+															className={cn("flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50", fieldErrors.endTime ? "border-red-500 focus-visible:ring-red-500" : "")}
+															wrapperClassName="w-full"
 														/>
 														{fieldErrors.endTime && <p className="text-xs text-red-500">{fieldErrors.endTime}</p>}
 													</div>
@@ -1069,6 +1122,7 @@ export default function BookingForm({
 																			year: "numeric",
 																			hour: "2-digit",
 																			minute: "2-digit",
+																			hour12: false,
 																		},
 																	)
 																	: "—"}

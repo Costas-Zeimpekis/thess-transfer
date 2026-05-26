@@ -30,6 +30,9 @@ export async function GET(request: Request) {
 	const to = searchParams.get("to");
 	const search = searchParams.get("search");
 	const paymentMethod = searchParams.get("paymentMethod");
+	const pickupLocation = searchParams.get("pickupLocation");
+	const dropoffLocation = searchParams.get("dropoffLocation");
+	const vehicleType = searchParams.get("vehicleType");
 
 	const conditions = [];
 
@@ -79,6 +82,15 @@ export async function GET(request: Request) {
 				paymentMethod as "cash" | "paypal" | "credit_card" | "bank" | "paid",
 			),
 		);
+	}
+	if (pickupLocation) {
+		conditions.push(ilike(bookings.pickupLocation, `%${pickupLocation}%`));
+	}
+	if (dropoffLocation) {
+		conditions.push(ilike(bookings.dropoffLocation, `%${dropoffLocation}%`));
+	}
+	if (vehicleType) {
+		conditions.push(eq(bookings.vehicleType, vehicleType as "car" | "van" | "bus"));
 	}
 
 	const driversAlias = drivers;
