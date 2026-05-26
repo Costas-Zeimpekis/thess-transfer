@@ -157,6 +157,28 @@ function SortIcon({
 	);
 }
 
+const FILTERS_KEY = "bookings-filters";
+const DEFAULT_APPLIED = {
+	from: "",
+	to: "",
+	status: "all",
+	bookingSource: "all" as "all" | "own" | "provider",
+	providerId: "all",
+	driverId: "all",
+	vehicleId: "all",
+	partnerId: "all",
+	paymentMethod: "all",
+	search: "",
+};
+
+function readSaved(): Record<string, unknown> | null {
+	try {
+		if (typeof window === "undefined") return null;
+		const s = sessionStorage.getItem(FILTERS_KEY);
+		return s ? (JSON.parse(s) as Record<string, unknown>) : null;
+	} catch { return null; }
+}
+
 export default function BookingsClient({
 	providers,
 	drivers,
@@ -164,34 +186,28 @@ export default function BookingsClient({
 	partners,
 }: BookingsClientProps) {
 	const router = useRouter();
-	const [from, setFrom] = useState("");
-	const [to, setTo] = useState("");
-	const [status, setStatus] = useState("all");
-	const [bookingSource, setBookingSource] = useState<
-		"all" | "own" | "provider"
-	>("all");
-	const [providerId, setProviderId] = useState("all");
-	const [driverId, setDriverId] = useState("all");
-	const [vehicleId, setVehicleId] = useState("all");
-	const [partnerId, setPartnerId] = useState("all");
-	const [paymentMethod, setPaymentMethod] = useState("all");
-	const [search, setSearch] = useState("");
+
+	const [savedFilters] = useState<Record<string, unknown> | null>(readSaved);
+
+	const [from, setFrom] = useState<string>((savedFilters?.from as string) ?? "");
+	const [to, setTo] = useState<string>((savedFilters?.to as string) ?? "");
+	const [status, setStatus] = useState<string>((savedFilters?.status as string) ?? "all");
+	const [bookingSource, setBookingSource] = useState<"all" | "own" | "provider">(
+		(savedFilters?.bookingSource as "all" | "own" | "provider") ?? "all",
+	);
+	const [providerId, setProviderId] = useState<string>((savedFilters?.providerId as string) ?? "all");
+	const [driverId, setDriverId] = useState<string>((savedFilters?.driverId as string) ?? "all");
+	const [vehicleId, setVehicleId] = useState<string>((savedFilters?.vehicleId as string) ?? "all");
+	const [partnerId, setPartnerId] = useState<string>((savedFilters?.partnerId as string) ?? "all");
+	const [paymentMethod, setPaymentMethod] = useState<string>((savedFilters?.paymentMethod as string) ?? "all");
+	const [search, setSearch] = useState<string>((savedFilters?.search as string) ?? "");
 	const [assignmentTab, setAssignmentTab] = useState<"driver" | "partner">(
-		"driver",
+		(savedFilters?.assignmentTab as "driver" | "partner") ?? "driver",
 	);
 
-	const [applied, setApplied] = useState({
-		from: "",
-		to: "",
-		status: "all",
-		bookingSource: "all" as "all" | "own" | "provider",
-		providerId: "all",
-		driverId: "all",
-		vehicleId: "all",
-		partnerId: "all",
-		paymentMethod: "all",
-		search: "",
-	});
+	const [applied, setApplied] = useState<typeof DEFAULT_APPLIED>(
+		(savedFilters?.applied as typeof DEFAULT_APPLIED) ?? DEFAULT_APPLIED,
+	);
 
 	const [bookingsList, setBookingsList] = useState<BookingRow[]>([]);
 	const [totals, setTotals] = useState<Totals>({

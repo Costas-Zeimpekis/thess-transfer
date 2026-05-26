@@ -168,12 +168,8 @@ export default async function BookingPrintPage({ params }: PageProps) {
 				{/* Transport Details */}
 				<Section title="Στοιχεία Μεταφοράς">
 					<div className="grid grid-cols-2 gap-x-8 gap-y-3">
-						<Field label="Ημερομηνία Κατάρτισης" value={fmtDatetime(b.createdAt)} />
-						<div />
 						<Field label="Ημ/νία Άφιξης" value={fmtDatetime(b.arrivalDatetime)} />
 						<Field label="Αριθμός Πτήσης" value={b.flightNumber ?? "—"} />
-						<Field label="Ώρα Έναρξης" value={b.startTime ?? "—"} />
-						<Field label="Ώρα Λήξης" value={b.endTime ?? "—"} />
 						<Field label="Σημείο Παραλαβής" value={b.pickupLocation} />
 						<Field label="Προορισμός" value={b.dropoffLocation} />
 					</div>
@@ -181,9 +177,8 @@ export default async function BookingPrintPage({ params }: PageProps) {
 
 				{/* Passengers & Vehicle */}
 				<Section title="Επιβάτες & Όχημα">
-					<div className="grid grid-cols-4 gap-x-8 gap-y-3">
+					<div className="grid grid-cols-3 gap-x-8 gap-y-3">
 						<Field label="Επιβάτες" value={String(b.passengerCount)} />
-						<Field label="Τύπος Οχήματος" value={isPartnerAssigned ? "—" : (VEHICLE_TYPE_LABELS[b.vehicleType] ?? b.vehicleType)} />
 						<Field label="Baby Seat" value={b.babySeat ? String(b.babySeat) : "0"} />
 						<Field label="Booster Seat" value={b.boosterSeat ? String(b.boosterSeat) : "0"} />
 					</div>
@@ -191,15 +186,21 @@ export default async function BookingPrintPage({ params }: PageProps) {
 
 				{/* Customer */}
 				<Section title="Στοιχεία Πελάτη">
-					<div className="grid grid-cols-3 gap-x-8 gap-y-3">
+					<div className="grid grid-cols-4 gap-x-8 gap-y-3">
 						<Field label="Ονοματεπώνυμο" value={b.customerName} />
 						<Field label="Τηλέφωνο" value={b.customerPhone ?? "—"} />
 						<Field label="Email" value={b.customerEmail ?? "—"} />
+						<Field label="Τύπος Οχήματος" value={VEHICLE_TYPE_LABELS[b.vehicleType] ?? b.vehicleType} />
 					</div>
 				</Section>
 
 				{/* Assignment */}
 				<Section title="Ανάθεση">
+					<div className="grid grid-cols-3 gap-x-8 gap-y-3 mb-3">
+						<Field label="Ημερομηνία Κατάρτισης" value={fmtDatetime(b.createdAt)} />
+						<Field label="Ώρα Έναρξης" value={b.startTime ?? "—"} />
+						<Field label="Ώρα Λήξης" value={b.endTime ?? "—"} />
+					</div>
 					{isPartnerAssigned ? (
 						<div className="grid grid-cols-2 gap-x-8 gap-y-3">
 							<Field label="Συνεργάτης" value={b.partnerName ?? "—"} />
