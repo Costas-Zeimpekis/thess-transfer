@@ -438,17 +438,10 @@ export default function BookingForm({
 							noValidate
 						>
 							{/* Στοιχεία Κράτησης */}
-							<Card className="h-[500px] overflow-auto">
+							<Card className="h-[420px] overflow-auto">
 								<CardHeader>
-									<CardTitle className="text-base text-black size-5 w-full font-semibold flex justify-between">
-										<span>Στοιχεία Κράτησης</span> 	{isEdit && booking?.createdAt && (
-											<p className="text-sm font-medium">Ημερομηνία Κατάρτισης
-												{new Date(booking.createdAt).toLocaleString("el-GR", {
-													day: "2-digit", month: "2-digit", year: "numeric",
-													hour: "2-digit", minute: "2-digit", hour12: false,
-												})}
-											</p>
-										)}
+									<CardTitle className="text-base text-black size-5 w-full font-semibold">
+										Στοιχεία Κράτησης
 									</CardTitle>
 									<hr className="border-b-2 border-b-[#f9cf44]" />
 								</CardHeader>
@@ -550,33 +543,6 @@ export default function BookingForm({
 										{fieldErrors.flightNumber && <p className="text-xs text-red-500">{fieldErrors.flightNumber}</p>}
 									</div>
 
-									<div className="col-span-2 grid grid-cols-2 gap-4">
-										<div className="space-y-2">
-											<Label htmlFor="startTime" className={fieldErrors.startTime ? "text-red-500" : ""}>Ώρα Έναρξης</Label>
-											<Input
-												id="startTime"
-												type="time"
-												value={startTime}
-												onChange={(e) => { setStartTime(e.target.value); clearError("startTime"); }}
-												disabled={loading}
-												className={fieldErrors.startTime ? "border-red-500 focus-visible:ring-red-500" : ""}
-											/>
-											{fieldErrors.startTime && <p className="text-xs text-red-500">{fieldErrors.startTime}</p>}
-										</div>
-										<div className="space-y-2">
-											<Label htmlFor="endTime" className={fieldErrors.endTime ? "text-red-500" : ""}>Ώρα Λήξης</Label>
-											<Input
-												id="endTime"
-												type="time"
-												value={endTime}
-												onChange={(e) => { setEndTime(e.target.value); clearError("endTime"); }}
-												disabled={loading}
-												className={fieldErrors.endTime ? "border-red-500 focus-visible:ring-red-500" : ""}
-											/>
-											{fieldErrors.endTime && <p className="text-xs text-red-500">{fieldErrors.endTime}</p>}
-										</div>
-									</div>
-
 									<div className="space-y-2">
 										<Label htmlFor="pickupLocation" className={fieldErrors.pickupLocation ? "text-red-500" : ""}>Τόπος Παραλαβής *</Label>
 										<Input
@@ -645,7 +611,7 @@ export default function BookingForm({
 							</Card>
 
 							{/* Στοιχεία Πελάτη */}
-							<Card className="h-[205px] overflow-auto">
+							<Card className="h-[260px] overflow-auto">
 								<CardHeader>
 									<CardTitle className="text-base text-black size-5 w-full font-semibold">
 										Στοιχεία Πελάτη
@@ -706,6 +672,23 @@ export default function BookingForm({
 											className={fieldErrors.customerEmail ? "border-red-500 focus-visible:ring-red-500" : ""}
 										/>
 										{fieldErrors.customerEmail && <p className="text-xs text-red-500">{fieldErrors.customerEmail}</p>}
+									</div>
+									<div className="space-y-2">
+										<Label>Τύπος Οχήματος *</Label>
+										<Select
+											value={vehicleType}
+											onValueChange={(v) => setVehicleType(v ?? "car")}
+											disabled={loading}
+										>
+											<SelectTrigger>
+												<SelectValue />
+											</SelectTrigger>
+											<SelectContent>
+												<SelectItem value="car">Επιβατικό</SelectItem>
+												<SelectItem value="van">Βανάκι</SelectItem>
+												<SelectItem value="bus">Λεωφορείο</SelectItem>
+											</SelectContent>
+										</Select>
 									</div>
 								</CardContent>
 							</Card>
@@ -790,6 +773,22 @@ export default function BookingForm({
 									<CardContent className="space-y-4">
 										{isAssignmentLocked ? (
 											<div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+												{isEdit && booking?.createdAt && (
+													<div>
+														<p className="text-xs text-muted-foreground mb-0.5">Ημερομηνία Κατάρτισης</p>
+														<p className="text-sm font-medium">
+															{new Date(booking.createdAt).toLocaleString("el-GR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}
+														</p>
+													</div>
+												)}
+												<div>
+													<p className="text-xs text-muted-foreground mb-0.5">Ώρα Έναρξης</p>
+													<p className="text-sm font-medium">{startTime || "—"}</p>
+												</div>
+												<div>
+													<p className="text-xs text-muted-foreground mb-0.5">Ώρα Λήξης</p>
+													<p className="text-sm font-medium">{endTime || "—"}</p>
+												</div>
 												{booking!.driverId != null ? (
 													<>
 														<div>
@@ -814,18 +813,6 @@ export default function BookingForm({
 																		return v ? `${v.name} (${v.plate})` : "—";
 																	})()
 																	: "—"}
-															</p>
-														</div>
-														<div>
-															<p className="text-xs text-muted-foreground mb-0.5">
-																Τύπος Οχήματος
-															</p>
-															<p className="text-sm font-medium">
-																{{
-																	car: "Επιβατικό",
-																	van: "Βανάκι",
-																	bus: "Λεωφορείο",
-																}[vehicleType] ?? vehicleType}
 															</p>
 														</div>
 													</>
@@ -860,6 +847,40 @@ export default function BookingForm({
 											</div>
 										) : (
 											<>
+												<div className="grid grid-cols-3 gap-4">
+													{isEdit && booking?.createdAt && (
+														<div className="space-y-2">
+															<Label>Ημερομηνία Κατάρτισης</Label>
+															<p className="text-sm font-medium h-9 flex items-center">
+																{new Date(booking.createdAt).toLocaleString("el-GR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}
+															</p>
+														</div>
+													)}
+													<div className="space-y-2">
+														<Label htmlFor="startTime" className={fieldErrors.startTime ? "text-red-500" : ""}>Ώρα Έναρξης</Label>
+														<Input
+															id="startTime"
+															type="time"
+															value={startTime}
+															onChange={(e) => { setStartTime(e.target.value); clearError("startTime"); }}
+															disabled={loading}
+															className={fieldErrors.startTime ? "border-red-500 focus-visible:ring-red-500" : ""}
+														/>
+														{fieldErrors.startTime && <p className="text-xs text-red-500">{fieldErrors.startTime}</p>}
+													</div>
+													<div className="space-y-2">
+														<Label htmlFor="endTime" className={fieldErrors.endTime ? "text-red-500" : ""}>Ώρα Λήξης</Label>
+														<Input
+															id="endTime"
+															type="time"
+															value={endTime}
+															onChange={(e) => { setEndTime(e.target.value); clearError("endTime"); }}
+															disabled={loading}
+															className={fieldErrors.endTime ? "border-red-500 focus-visible:ring-red-500" : ""}
+														/>
+														{fieldErrors.endTime && <p className="text-xs text-red-500">{fieldErrors.endTime}</p>}
+													</div>
+												</div>
 												<div className="flex gap-2">
 													<button
 														type="button"
@@ -884,7 +905,7 @@ export default function BookingForm({
 												</div>
 
 												{assignMode === "driver" ? (
-													<div className="grid grid-cols-3 gap-4">
+													<div className="grid grid-cols-2 gap-4">
 														<div className="space-y-2">
 															<Label className={fieldErrors.assignDriverId ? "text-red-500" : ""}>Οδηγός</Label>
 															<Select
@@ -939,28 +960,9 @@ export default function BookingForm({
 															</Select>
 															{fieldErrors.assignVehicleId && <p className="text-xs text-red-500">{fieldErrors.assignVehicleId}</p>}
 														</div>
-														<div className="space-y-2">
-															<Label>Τύπος Οχήματος *</Label>
-															<Select
-																value={vehicleType}
-																onValueChange={(v) =>
-																	setVehicleType(v ?? "car")
-																}
-																disabled={loading}
-															>
-																<SelectTrigger>
-																	<SelectValue />
-																</SelectTrigger>
-																<SelectContent>
-																	<SelectItem value="car">Επιβατικό</SelectItem>
-																	<SelectItem value="van">Βανάκι</SelectItem>
-																	<SelectItem value="bus">Λεωφορείο</SelectItem>
-																</SelectContent>
-															</Select>
-														</div>
 													</div>
 												) : (
-													<div className="grid grid-cols-3 gap-4">
+													<div className="grid grid-cols-2 gap-4">
 														<div className="space-y-2">
 															<Label className={fieldErrors.assignPartnerId ? "text-red-500" : ""}>Συνεργάτης</Label>
 															<Select
@@ -1002,23 +1004,6 @@ export default function BookingForm({
 																className={fieldErrors.assignPartnerPrice ? "border-red-500 focus-visible:ring-red-500" : ""}
 															/>
 															{fieldErrors.assignPartnerPrice && <p className="text-xs text-red-500">{fieldErrors.assignPartnerPrice}</p>}
-														</div>
-														<div className="space-y-2">
-															<Label>Τύπος Οχήματος *</Label>
-															<Select
-																value={vehicleType}
-																onValueChange={(v) => setVehicleType(v ?? "car")}
-																disabled={loading}
-															>
-																<SelectTrigger>
-																	<SelectValue />
-																</SelectTrigger>
-																<SelectContent>
-																	<SelectItem value="car">Επιβατικό</SelectItem>
-																	<SelectItem value="van">Βανάκι</SelectItem>
-																	<SelectItem value="bus">Λεωφορείο</SelectItem>
-																</SelectContent>
-															</Select>
 														</div>
 													</div>
 												)}
