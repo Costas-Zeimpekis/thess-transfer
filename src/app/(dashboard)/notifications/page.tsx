@@ -160,9 +160,10 @@ export default function NotificationsPage() {
             return (
               <div
                 key={log.id}
+                onClick={() => toggleExpand(log.id)}
                 className={cn(
-                  "rounded-lg border p-4 transition-colors",
-                  log.read ? "bg-white border-border" : "bg-red-50 border-red-200",
+                  "rounded-lg border p-4 transition-colors cursor-pointer",
+                  log.read ? "bg-white border-border hover:bg-gray-50" : "bg-red-50 border-red-200 hover:bg-red-100",
                 )}
               >
                 <div className="flex items-start justify-between gap-4">
@@ -178,12 +179,7 @@ export default function NotificationsPage() {
                   <div className="flex items-center gap-3 shrink-0">
                     <span className="text-xs text-muted-foreground">{fmt(log.createdAt)}</span>
                     {log.payload != null && (
-                      <button
-                        onClick={() => toggleExpand(log.id)}
-                        className="text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                      </button>
+                      isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />
                     )}
                   </div>
                 </div>

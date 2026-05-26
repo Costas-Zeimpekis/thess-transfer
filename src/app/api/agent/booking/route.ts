@@ -129,7 +129,7 @@ export async function POST(request: Request) {
     changes: null,
   });
 
-  await log("info", "POST /api/agent/booking", `Booking #${booking.id} created (ref: ${booking.providerBookingRef})`, { bookingId: booking.id, ref: booking.providerBookingRef });
+  await log("info", "POST /api/agent/booking", `Booking #${booking.id} created (ref: ${booking.providerBookingRef})`, { bookingId: booking.id, ref: booking.providerBookingRef, body });
 
   return NextResponse.json(booking, { status: 201 });
 }
@@ -288,7 +288,7 @@ export async function PUT(request: Request) {
     changes,
   });
 
-  await log("info", "PUT /api/agent/booking", `Booking #${current.id} updated (ref: ${provider_booking_ref})`, { bookingId: current.id, changes });
+  await log("info", "PUT /api/agent/booking", `Booking #${current.id} updated (ref: ${provider_booking_ref})`, { bookingId: current.id, changes, body });
 
   return NextResponse.json(result[0]);
 }
@@ -364,7 +364,7 @@ export async function PATCH(request: Request) {
     changes: { status: { from: current.status, to: newStatus } },
   });
 
-  await log("info", "PATCH /api/agent/booking", `Booking #${current.id} status: ${current.status} → ${newStatus} (ref: ${provider_booking_ref})`, { bookingId: current.id, from: current.status, to: newStatus });
+  await log("info", "PATCH /api/agent/booking", `Booking #${current.id} status: ${current.status} → ${newStatus} (ref: ${provider_booking_ref})`, { bookingId: current.id, from: current.status, to: newStatus, body });
 
   return NextResponse.json(result[0]);
 }
