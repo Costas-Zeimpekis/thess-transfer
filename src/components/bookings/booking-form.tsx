@@ -1098,9 +1098,36 @@ export default function BookingForm({
 								{history !== undefined && (
 									<Card className="flex-1 overflow-auto">
 										<CardHeader>
-											<CardTitle className="text-base text-black size-5 w-full font-semibold">
-												Ιστορικό
-											</CardTitle>
+											<div className="flex items-center justify-between">
+												<CardTitle className="text-base text-black size-5 font-semibold">
+													Ιστορικό
+												</CardTitle>
+												{history.length > 0 && (
+													<Button
+														size="sm"
+														variant="outline"
+														className="h-7 text-xs"
+														onClick={() => {
+															const lines = history.map((h) => {
+																const date = h.createdAt
+																	? new Date(h.createdAt).toLocaleString("el-GR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })
+																	: "—";
+																const changes = h.changes != null ? `  ${JSON.stringify(h.changes)}` : "";
+																return `${date}  ${h.action}${changes}`;
+															});
+															const blob = new Blob([lines.join("\n")], { type: "text/plain" });
+															const url = URL.createObjectURL(blob);
+															const a = document.createElement("a");
+															a.href = url;
+															a.download = "history.txt";
+															a.click();
+															URL.revokeObjectURL(url);
+														}}
+													>
+														Download
+													</Button>
+												)}
+											</div>
 											<hr className="border-b-2 border-b-[#f9cf44]" />
 										</CardHeader>
 										<CardContent>
@@ -1109,9 +1136,9 @@ export default function BookingForm({
 													Δεν υπάρχουν εγγραφές ιστορικού
 												</p>
 											) : (
-												<ol className="space-y-3">
+												<ol className="space-y-3 overflow-x-auto">
 													{history.map((h) => (
-														<li key={h.id} className="flex gap-3 text-sm">
+														<li key={h.id} className="flex gap-3 text-sm min-w-max">
 															<span className="text-muted-foreground whitespace-nowrap">
 																{h.createdAt
 																	? new Date(h.createdAt).toLocaleString(
@@ -1127,9 +1154,9 @@ export default function BookingForm({
 																	)
 																	: "—"}
 															</span>
-															<span className="font-medium">{h.action}</span>
+															<span className="font-medium whitespace-nowrap">{h.action}</span>
 															{h.changes != null && (
-																<span className="text-muted-foreground text-xs font-mono truncate">
+																<span className="text-muted-foreground text-xs font-mono whitespace-nowrap">
 																	{JSON.stringify(h.changes)}
 																</span>
 															)}
