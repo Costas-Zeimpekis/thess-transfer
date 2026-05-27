@@ -650,7 +650,7 @@ export default function BookingForm({
 							</Card>
 
 							{/* Στοιχεία Πελάτη */}
-							<Card className="h-[260px] overflow-auto">
+							<Card className="h-[300px] overflow-auto">
 								<CardHeader>
 									<CardTitle className="text-base text-black size-5 w-full font-semibold">
 										Στοιχεία Πελάτη
