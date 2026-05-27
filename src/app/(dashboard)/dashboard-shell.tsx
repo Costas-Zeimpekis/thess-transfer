@@ -33,6 +33,7 @@ export default function DashboardShell({
 
 	async function handleLogout() {
 		await fetch("/api/auth/logout", { method: "POST" });
+		try { sessionStorage.removeItem("bookings-filters"); } catch { /* ignore */ }
 		router.push("/login");
 	}
 

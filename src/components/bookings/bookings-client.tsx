@@ -397,7 +397,8 @@ export default function BookingsClient({
 
 	function handleReset() {
 		setPage(1);
-		try { sessionStorage.removeItem(FILTERS_KEY); } catch { /* ignore */ }
+		const resetState = { from: "", to: "", status: "all", bookingSource: "all" as const, providerId: "all", driverId: "all", vehicleId: "all", partnerId: "all", paymentMethod: "all", search: "", pickupLocation: "", dropoffLocation: "", vehicleType: "all" };
+		try { sessionStorage.setItem(FILTERS_KEY, JSON.stringify({ ...resetState, assignmentTab: "driver", applied: resetState })); } catch { /* ignore */ }
 		setFrom("");
 		setTo("");
 		setStatus("all");
@@ -412,7 +413,7 @@ export default function BookingsClient({
 		setPickupLocation("");
 		setDropoffLocation("");
 		setVehicleTypeFilter("all");
-		setApplied({ from: "", to: "", status: "all", bookingSource: "all", providerId: "all", driverId: "all", vehicleId: "all", partnerId: "all", paymentMethod: "all", search: "", pickupLocation: "", dropoffLocation: "", vehicleType: "all" });
+		setApplied(resetState);
 	}
 
 	function handleExport() {
