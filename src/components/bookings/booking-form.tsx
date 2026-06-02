@@ -439,13 +439,22 @@ export default function BookingForm({
 							{loading ? "Αποθήκευση…" : "Αποθήκευση"}
 						</Button>
 						{isEdit && booking?.id && (
-							<Link
-								href={`/bookings/${booking.id}/print`}
-								target="_blank"
-								className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-muted transition-colors"
-							>
-								Εκτύπωση / PDF
-							</Link>
+							<>
+								<Link
+									href={`/bookings/${booking.id}/print`}
+									target="_blank"
+									className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-muted transition-colors"
+								>
+									Εκτύπωση / PDF
+								</Link>
+								<Link
+									href={`/bookings/${booking.id}/print2`}
+									target="_blank"
+									className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-muted transition-colors"
+								>
+									Σύμβαση Μίσθωσης
+								</Link>
+							</>
 						)}
 					</div>
 				</div>
