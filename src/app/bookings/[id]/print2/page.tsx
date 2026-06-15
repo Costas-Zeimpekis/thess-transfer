@@ -3,13 +3,13 @@ import { eq } from "drizzle-orm";
 import type { Metadata } from "next";
 import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { bookings, providers, drivers, vehicles, partners } from "@/lib/db/schema";
+import { bookings, drivers, vehicles, partners } from "@/lib/db/schema";
 import PrintActions from "../print/print-actions";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
 	const { id } = await params;
 	const bookingId = parseInt(id, 10);
-	if (Number.isNaN(bookingId)) return { title: "Σύμβαση Μίσθωσης" };
+	if (Number.isNaN(bookingId)) return { title: "Μισθωτήριο Συμβόλαιο" };
 
 	const rows = await db
 		.select({ id: bookings.id, customerName: bookings.customerName })
@@ -18,8 +18,8 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 		.limit(1);
 
 	const b = rows[0];
-	if (!b) return { title: "Σύμβαση Μίσθωσης" };
-	return { title: `Σύμβαση Μίσθωσης — ${b.customerName} #${b.id}` };
+	if (!b) return { title: "Μισθωτήριο Συμβόλαιο" };
+	return { title: `Μισθωτήριο Συμβόλαιο — ${b.customerName} #${b.id}` };
 }
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
@@ -81,6 +81,7 @@ export default async function BookingContractPrintPage({ params }: PageProps) {
 			driverId: bookings.driverId,
 			vehicleId: bookings.vehicleId,
 			partnerId: bookings.partnerId,
+			assignedAt: bookings.assignedAt,
 			createdAt: bookings.createdAt,
 			driverName: drivers.fullName,
 			driverIdCard: drivers.idCard,
@@ -103,10 +104,9 @@ export default async function BookingContractPrintPage({ params }: PageProps) {
 	const startDate = fmtDate(b.arrivalDatetime);
 	const endDate = fmtDate(b.arrivalDatetime);
 	const duration = calcDurationHours(b.startTime, b.endTime);
-	const issuedAt = fmtIssueDatetime(b.createdAt);
+	const issuedAt = fmtIssueDatetime(b.assignedAt ?? b.createdAt);
 	const price = b.declaredPrice ? `${parseFloat(b.declaredPrice).toFixed(2)}` : "—";
 	const payment = PAYMENT_METHOD_LABELS[b.paymentMethod ?? ""] ?? (b.paymentMethod ?? "—");
-	const vehicle = b.vehicleName && b.vehiclePlate ? `${b.vehicleName} (${b.vehiclePlate})` : (b.vehicleName ?? "—");
 
 	return (
 		<div className="min-h-screen bg-gray-100 print:bg-white py-8 print:py-0">
@@ -114,23 +114,29 @@ export default async function BookingContractPrintPage({ params }: PageProps) {
 				<PrintActions />
 
 				{/* Header */}
-				<div className="flex items-start justify-between mb-4 pb-4 border-b-4 border-[#f9cf44]">
-					<div>
-						<p className="text-2xl font-extrabold tracking-tight text-[#333333]">THESS TRANSFERS</p>
-						<p className="text-sm text-muted-foreground mt-1">Μεταφορές — Θεσσαλονίκη</p>
+				<div className="flex items-start justify-between mb-5 pb-4 border-b border-gray-300">
+					{/* Left: Brand logo */}
+					<div className="flex items-end gap-3">
+						<span className="text-5xl font-black tracking-tight text-[#333333] leading-none">SALONICA</span>
+						<div className="flex flex-col leading-tight mb-0.5">
+							<span className="text-xl font-bold text-[#333333] tracking-wide">TRAVEL</span>
+							<span className="text-xl font-bold text-[#333333] tracking-wide">SERVICES</span>
+						</div>
 					</div>
-					<div className="text-right">
-						<p className="text-3xl font-extrabold text-[#333333]">#{b.id}</p>
-						{b.providerBookingRef && (
-							<p className="text-sm text-muted-foreground font-mono mt-0.5">Ref: {b.providerBookingRef}</p>
-						)}
+					{/* Right: Legal entity + contact */}
+					<div className="text-right text-[10px] leading-snug text-[#333333]">
+						<p className="font-bold text-[11px] mb-0.5">ΜΕΝΗ ΡΑΠΤΗ &amp; ΣΙΑ Ο.Ε.</p>
+						<p>New Railway Station Of Thessaloniki</p>
+						<p>Tel.: +30 2310 525050, Fax: +30 2310 552952</p>
+						<p>Web: www.transfersthessaloniki.com</p>
+						<p>E-mail: info@transfersthessaloniki.com</p>
 					</div>
 				</div>
 
 				{/* Contract title */}
-				<div className="text-center mb-8">
-					<p className="text-xl font-extrabold tracking-widest text-[#333333] uppercase">ΣΥΜΒΑΣΗ ΜΙΣΘΩΣΗΣ ΟΧΗΜΑΤΟΣ</p>
-					<p className="text-sm font-semibold tracking-widest text-muted-foreground uppercase mt-0.5">VEHICLE RENTAL AGREEMENT</p>
+				<div className="border-2 border-[#333333] rounded-sm px-6 py-3 text-center mb-8 mx-16">
+					<p className="text-lg font-extrabold tracking-widest text-[#333333] uppercase">ΜΙΣΘΩΤΗΡΙΟ ΣΥΜΒΟΛΑΙΟ</p>
+					<p className="text-sm font-semibold tracking-widest text-[#555555] uppercase">RENTAL CONTRACT</p>
 				</div>
 
 				{/* Two-column contract fields */}
@@ -165,15 +171,23 @@ export default async function BookingContractPrintPage({ params }: PageProps) {
 							value={String(b.passengerCount)}
 							note="Η σύμβαση μίσθωσης ισχύει για τους παρακάτω επιβάτες / Rental agreement is valid for the following passengers"
 						/>
-						<ContractField labelGr="ΣΗΜΕΙΟ ΕΝΑΡΞΗΣ" labelEn="START LOCATION" value={b.dropoffLocation} />
+						<ContractField labelGr="ΣΗΜΕΙΟ ΕΝΑΡΞΗΣ" labelEn="START LOCATION" value="ΕΔΡΑ ΜΑΣ (ΜΟΝΑΣΤΗΡΙΟΥ 28)" />
 						<ContractField labelGr="ΣΗΜΕΙΟ ΕΠΙΒΙΒΑΣΗΣ" labelEn="PICK UP LOCATION" value={b.pickupLocation} />
 						<ContractField labelGr="ΑΝΤΙΤΙΜΟ" labelEn="PRICE €" value={price} />
 						<ContractField labelGr="ΤΡΟΠΟΣ ΠΛΗΡΩΜΗΣ" labelEn="WAY OF PAYMENT" value={payment} />
 					</div>
 				</div>
 
+				{/* Consent text */}
+				<div className="mb-6 text-[8px] leading-relaxed text-[#555555] border-t border-gray-200 pt-4">
+					<p className="font-bold mb-1">Συγκατάθεση πελάτη</p>
+					<p>Όπως ορίζεται στο άρθρο 4 παρ. 2 εδάφ. α&apos; της ΚΥΑ 43618/1925 (ΦΕΚ Β&apos; 2251/11.06.2019), επιβεβαιώνω πως έχω ενημερωθεί για τα προαναγραφόμενα στοιχεία της σύμβασης που με αφορούν, καταχωρούνται στο Ψηφιακό Μητρώο που τηρείται στο Υπουργείο Υποδομών και Μεταφορών. Τα σύνολο των δεδομένων μου προσωπικού χαρακτήρα (ονοματεπώνυμο, στοιχεία ταυτότητας ή διαβατηρίου, σημείο επιβίβασης) διαγράφονται εντός είκοσι τεσσάρων (24) ωρών από τη λήξη της σύμβασης.</p>
+					<p className="mt-1 font-bold">Customer Consent</p>
+					<p>As defined in article 4 paragraph 2 subparagraph &quot;a&quot; of Ministerial Decision 43618/1925 (Government Gazette B&quot; 2251/11.06.2019), I confirm that I have been informed that my personal data mentioned herein are registered in the Digital Platform of the Ministry of Infrastructure and Transportation. All my personal data (name, identification or passport details, pick-up location) are deleted within twenty four (24) hours after the end of this contract.</p>
+				</div>
+
 				{/* Signature section */}
-				<div className="mt-8 pt-6 border-t-2 border-[#f9cf44]">
+				<div className="pt-4 border-t-2 border-[#f9cf44]">
 					<div className="grid grid-cols-2 gap-x-10">
 						<div>
 							<p className="text-[10px] font-bold uppercase tracking-widest text-[#333333] mb-1">
@@ -191,8 +205,8 @@ export default async function BookingContractPrintPage({ params }: PageProps) {
 				</div>
 
 				{/* Footer */}
-				<div className="mt-6 pt-3 border-t border-gray-200 text-xs text-muted-foreground text-center">
-					<span>THESS TRANSFERS · Θεσσαλονίκη</span>
+				<div className="mt-4 pt-3 border-t border-gray-200 text-[9px] text-muted-foreground text-center">
+					<span>ΜΕΝΗ ΡΑΠΤΗ &amp; ΣΙΑ Ο.Ε. · SALONICA TRAVEL SERVICES · New Railway Station Of Thessaloniki · Tel.: +30 2310 525050</span>
 				</div>
 			</div>
 		</div>
