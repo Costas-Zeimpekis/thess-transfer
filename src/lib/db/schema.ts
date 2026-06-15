@@ -209,6 +209,7 @@ export const bookings = pgTable(
 		googleCalendarEventId: varchar("google_calendar_event_id", { length: 200 }),
 
 		customFields: jsonb("custom_fields").default({}),
+		assignedAt: timestamp("assigned_at", { withTimezone: true }),
 		completedAt: timestamp("completed_at", { withTimezone: true }),
 		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 		updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),

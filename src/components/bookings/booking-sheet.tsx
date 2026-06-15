@@ -50,6 +50,7 @@ export type BookingFormData = {
 	vehicleId?: number | null;
 	partnerId?: number | null;
 	partnerAssignmentPrice?: string | null;
+	assignedAt?: string | null;
 	createdAt?: string | null;
 };
 

@@ -99,6 +99,13 @@
       "when": 1747180800000,
       "tag": "0013_rename_pickup_to_arrival",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1749945600000,
+      "tag": "0014_add_assigned_at",
+      "breakpoints": true
     }
   ]
 }

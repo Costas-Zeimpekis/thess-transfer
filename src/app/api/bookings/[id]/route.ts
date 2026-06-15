@@ -60,6 +60,7 @@ export async function GET(_request: Request, context: RouteContext) {
 			linkedBookingId: bookings.linkedBookingId,
 			isReturnTrip: bookings.isReturnTrip,
 			customFields: bookings.customFields,
+			assignedAt: bookings.assignedAt,
 			completedAt: bookings.completedAt,
 			createdAt: bookings.createdAt,
 			updatedAt: bookings.updatedAt,
@@ -142,6 +143,7 @@ export async function PUT(request: Request, context: RouteContext) {
 		partner_assignment_price,
 		linked_booking_id,
 		is_return_trip,
+		assigned_at,
 	} = body;
 
 	// Lock declared_price if completed
@@ -218,6 +220,8 @@ export async function PUT(request: Request, context: RouteContext) {
 	if (linked_booking_id !== undefined)
 		trackChange("linkedBookingId", linked_booking_id ?? null);
 	if (is_return_trip !== undefined) trackChange("isReturnTrip", is_return_trip);
+	if (assigned_at !== undefined)
+		trackChange("assignedAt", assigned_at ? new Date(assigned_at) : null);
 
 	// Auto-transition status based on assignment changes
 	if (

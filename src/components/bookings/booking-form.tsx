@@ -156,6 +156,16 @@ export default function BookingForm({
 	const [assignPartnerPrice, setAssignPartnerPrice] = useState(
 		booking?.partnerAssignmentPrice ?? "",
 	);
+	const [assignedAt, setAssignedAt] = useState(() => {
+		if (!booking?.assignedAt) return "";
+		const d = new Date(booking.assignedAt);
+		const y = d.getFullYear();
+		const mo = String(d.getMonth() + 1).padStart(2, "0");
+		const day = String(d.getDate()).padStart(2, "0");
+		const h = String(d.getHours()).padStart(2, "0");
+		const min = String(d.getMinutes()).padStart(2, "0");
+		return `${y}-${mo}-${day}T${h}:${min}`;
+	});
 
 	const [loading, setLoading] = useState(false);
 	const [transitioning, setTransitioning] = useState(false);
@@ -338,6 +348,7 @@ export default function BookingForm({
 				payment_method: !paymentMethod ? null : paymentMethod,
 				notes: notes || null,
 				real_price: realPrice ? parseFloat(realPrice) : null,
+				assigned_at: assignedAt || null,
 			};
 
 			if (!declaredPriceLocked) {
@@ -469,9 +480,19 @@ export default function BookingForm({
 							{/* Στοιχεία Κράτησης */}
 							<Card className="h-[420px] overflow-auto">
 								<CardHeader>
-									<CardTitle className="text-base text-black size-5 w-full font-semibold">
-										Στοιχεία Κράτησης
-									</CardTitle>
+									<div className="flex items-center justify-between w-full">
+										<CardTitle className="text-base text-black font-semibold">
+											Στοιχεία Κράτησης
+										</CardTitle>
+										{isEdit && booking?.createdAt && (
+											<div className="flex items-center gap-1.5 text-sm">
+												<span className="text-xs text-muted-foreground">Ημερομηνία κράτησης</span>
+												<span className="font-medium text-xs">
+													{new Date(booking.createdAt).toLocaleString("el-GR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}
+												</span>
+											</div>
+										)}
+									</div>
 									<hr className="border-b-2 border-b-[#f9cf44]" />
 								</CardHeader>
 								<CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-2">
@@ -821,14 +842,12 @@ export default function BookingForm({
 									<CardContent className="space-y-4">
 										{isAssignmentLocked ? (
 											<div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-												{isEdit && booking?.createdAt && (
-													<div>
-														<p className="text-xs text-muted-foreground mb-0.5">Ημερομηνία Κατάρτισης</p>
-														<p className="text-sm font-medium">
-															{new Date(booking.createdAt).toLocaleString("el-GR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}
-														</p>
-													</div>
-												)}
+												<div>
+													<p className="text-xs text-muted-foreground mb-0.5">Ημερομηνία Κατάρτησης</p>
+													<p className="text-sm font-medium">
+														{assignedAt ? new Date(assignedAt).toLocaleString("el-GR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) : "—"}
+													</p>
+												</div>
 												<div>
 													<p className="text-xs text-muted-foreground mb-0.5">Ώρα Έναρξης</p>
 													<p className="text-sm font-medium">{startTime || "—"}</p>
@@ -896,14 +915,32 @@ export default function BookingForm({
 										) : (
 											<>
 												<div className="grid grid-cols-3 gap-4">
-													{isEdit && booking?.createdAt && (
-														<div className="space-y-2">
-															<Label>Ημερομηνία Κατάρτισης</Label>
-															<p className="text-sm font-medium h-9 flex items-center">
-																{new Date(booking.createdAt).toLocaleString("el-GR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}
-															</p>
-														</div>
-													)}
+													<div className="space-y-2">
+														<Label htmlFor="assignedAt">Ημερομηνία Κατάρτησης</Label>
+														<DatePicker
+															selected={assignedAt ? new Date(assignedAt) : null}
+															onChange={(date: Date | null) => {
+																if (!date) { setAssignedAt(""); return; }
+																const y = date.getFullYear();
+																const mo = String(date.getMonth() + 1).padStart(2, "0");
+																const day = String(date.getDate()).padStart(2, "0");
+																const h = String(date.getHours()).padStart(2, "0");
+																const min = String(date.getMinutes()).padStart(2, "0");
+																setAssignedAt(`${y}-${mo}-${day}T${h}:${min}`);
+															}}
+															showTimeSelect
+															timeFormat="HH:mm"
+															timeIntervals={15}
+															dateFormat="dd/MM/yyyy HH:mm"
+															timeCaption="Ώρα"
+															placeholderText="ΗΗ/ΜΜ/ΕΕΕΕ ΩΩ:ΛΛ"
+															disabled={loading}
+															id="assignedAt"
+															className={cn("flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50")}
+															wrapperClassName="w-full"
+															popperPlacement="bottom-start"
+														/>
+													</div>
 													<div className="space-y-2">
 														<Label htmlFor="startTime" className={fieldErrors.startTime ? "text-red-500" : ""}>Ώρα Έναρξης</Label>
 														<DatePicker
