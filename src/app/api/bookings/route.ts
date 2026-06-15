@@ -2,6 +2,7 @@ import { and, desc, eq, gte, ilike, lte, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { parseAthensDatetime } from "@/lib/utils";
 import {
 	bookingHistory,
 	bookings,
@@ -251,7 +252,7 @@ export async function POST(request: Request) {
 			providerId: isProviderBooking ? provider_id : null,
 			status: "pending",
 			source: bookingSource,
-			arrivalDatetime: new Date(pickup_datetime),
+			arrivalDatetime: parseAthensDatetime(pickup_datetime),
 			flightNumber: flight_number ?? null,
 			startTime: start_time ?? null,
 			endTime: end_time ?? null,

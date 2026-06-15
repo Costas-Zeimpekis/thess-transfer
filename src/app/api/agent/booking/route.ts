@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { verifyAgentRequest } from "@/lib/agent-auth";
 import { db } from "@/lib/db";
 import { bookingHistory, bookings, providerEmails, systemLogs } from "@/lib/db/schema";
+import { parseAthensDatetime } from "@/lib/utils";
 
 async function log(level: string, source: string, message: string, payload: unknown) {
   await db.insert(systemLogs).values({ level, source, message, payload });
@@ -101,14 +102,14 @@ export async function POST(request: Request) {
       providerId: resolvedProviderId,
       source: "automatic",
       status: "pending",
-      arrivalDatetime: new Date(pickup_datetime),
+      arrivalDatetime: parseAthensDatetime(pickup_datetime),
       flightNumber: flight_number ?? null,
       pickupLocation: pickup_location,
       dropoffLocation: dropoff_location,
       passengerCount: passenger_count ?? 1,
       vehicleType: vehicle_type,
-      babySeat: baby_seat ?? false,
-      boosterSeat: booster_seat ?? false,
+      babySeat: baby_seat ?? 0,
+      boosterSeat: booster_seat ?? 0,
       customerName: customer_name,
       customerPhone: customer_phone ?? null,
       customerEmail: customer_email ?? null,
@@ -215,7 +216,7 @@ export async function PUT(request: Request) {
   const newValues = {
     providerId: resolvedProviderId,
     providerBookingRef: provider_booking_ref ?? current.providerBookingRef,
-    arrivalDatetime: new Date(pickup_datetime),
+    arrivalDatetime: parseAthensDatetime(pickup_datetime),
     flightNumber: flight_number ?? null,
     pickupLocation: pickup_location,
     dropoffLocation: dropoff_location,

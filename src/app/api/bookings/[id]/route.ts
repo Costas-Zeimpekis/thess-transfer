@@ -2,6 +2,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { parseAthensDatetime } from "@/lib/utils";
 import {
 	bookingHistory,
 	bookings,
@@ -176,7 +177,7 @@ export async function PUT(request: Request, context: RouteContext) {
 		trackChange("providerBookingRef", provider_booking_ref);
 	if (provider_id !== undefined) trackChange("providerId", provider_id);
 	if (pickup_datetime !== undefined)
-		trackChange("arrivalDatetime", new Date(pickup_datetime));
+		trackChange("arrivalDatetime", parseAthensDatetime(pickup_datetime));
 	if (flight_number !== undefined)
 		trackChange("flightNumber", flight_number ?? null);
 	if (start_time !== undefined)
