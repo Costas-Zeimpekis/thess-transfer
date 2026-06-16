@@ -488,7 +488,7 @@ export default function BookingForm({
 											<div className="flex items-center gap-1.5 text-sm">
 												<span className="text-xs text-muted-foreground">Ημερομηνία κράτησης</span>
 												<span className="font-medium text-xs">
-													{new Date(booking.createdAt).toLocaleString("el-GR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}
+													{new Date(booking.createdAt).toLocaleString("el-GR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Europe/Athens" })}
 												</span>
 											</div>
 										)}
@@ -845,7 +845,7 @@ export default function BookingForm({
 												<div>
 													<p className="text-xs text-muted-foreground mb-0.5">Ημερομηνία Κατάρτησης</p>
 													<p className="text-sm font-medium">
-														{assignedAt ? new Date(assignedAt).toLocaleString("el-GR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) : "—"}
+														{assignedAt ? new Date(assignedAt).toLocaleString("el-GR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Europe/Athens" }) : "—"}
 													</p>
 												</div>
 												<div>
@@ -1156,7 +1156,7 @@ export default function BookingForm({
 														onClick={() => {
 															const lines = history.map((h) => {
 																const date = h.createdAt
-																	? new Date(h.createdAt).toLocaleString("el-GR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })
+																	? new Date(h.createdAt).toLocaleString("el-GR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Europe/Athens" })
 																	: "—";
 																const changes = h.changes != null ? `  ${JSON.stringify(h.changes)}` : "";
 																return `${date}  ${h.action}${changes}`;
@@ -1187,17 +1187,7 @@ export default function BookingForm({
 														<li key={h.id} className="flex gap-3 text-sm min-w-max">
 															<span className="text-muted-foreground whitespace-nowrap">
 																{h.createdAt
-																	? new Date(h.createdAt).toLocaleString(
-																		"el-GR",
-																		{
-																			day: "2-digit",
-																			month: "2-digit",
-																			year: "numeric",
-																			hour: "2-digit",
-																			minute: "2-digit",
-																			hour12: false,
-																		},
-																	)
+																	? new Date(h.createdAt).toLocaleString("el-GR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Europe/Athens" })
 																	: "—"}
 															</span>
 															<span className="font-medium whitespace-nowrap">{h.action}</span>

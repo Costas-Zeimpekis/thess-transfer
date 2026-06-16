@@ -29,6 +29,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 		day: "2-digit",
 		month: "2-digit",
 		year: "numeric",
+		timeZone: "Europe/Athens",
 	});
 	const ref = b.providerBookingRef ?? `#${b.id}`;
 	const title = `${ref} - ${b.customerName} - ${date}`;
@@ -77,6 +78,7 @@ function fmtDatetime(val: Date | string | null) {
 		hour: "2-digit",
 		minute: "2-digit",
 		hour12: false,
+		timeZone: "Europe/Athens",
 	});
 }
 

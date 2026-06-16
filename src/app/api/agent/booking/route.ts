@@ -147,6 +147,7 @@ export async function PUT(request: Request) {
     provider_email,
     provider_id,
     provider_booking_ref,
+    new_provider_booking_ref,
     pickup_datetime,
     flight_number,
     pickup_location,
@@ -215,7 +216,7 @@ export async function PUT(request: Request) {
 
   const newValues = {
     providerId: resolvedProviderId,
-    providerBookingRef: provider_booking_ref ?? current.providerBookingRef,
+    providerBookingRef: new_provider_booking_ref ?? current.providerBookingRef,
     arrivalDatetime: parseAthensDatetime(pickup_datetime),
     flightNumber: flight_number ?? null,
     pickupLocation: pickup_location,
@@ -237,6 +238,7 @@ export async function PUT(request: Request) {
   const changes: Record<string, { from: unknown; to: unknown }> = {};
   const trackFields: Array<[string, keyof typeof current, unknown]> = [
     ["provider_id", "providerId", newValues.providerId],
+    ["provider_booking_ref", "providerBookingRef", newValues.providerBookingRef],
     ["pickup_datetime", "arrivalDatetime", newValues.arrivalDatetime],
     ["flight_number", "flightNumber", newValues.flightNumber],
     ["pickup_location", "pickupLocation", newValues.pickupLocation],

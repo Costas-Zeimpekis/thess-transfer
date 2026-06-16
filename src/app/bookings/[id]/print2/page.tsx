@@ -30,16 +30,18 @@ const PAYMENT_METHOD_LABELS: Record<string, string> = {
 	paid: "Πληρωμένο / Paid",
 };
 
+const TZ = "Europe/Athens";
+
 function fmtDate(val: Date | string | null) {
 	if (!val) return "—";
-	return new Date(val).toLocaleDateString("el-GR", { day: "2-digit", month: "2-digit", year: "numeric" });
+	return new Date(val).toLocaleDateString("el-GR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: TZ });
 }
 
 function fmtIssueDatetime(val: Date | string | null) {
 	if (!val) return "—";
 	const d = new Date(val);
-	const date = d.toLocaleDateString("el-GR", { day: "2-digit", month: "2-digit", year: "numeric" });
-	const time = d.toLocaleTimeString("el-GR", { hour: "2-digit", minute: "2-digit", hour12: false });
+	const date = d.toLocaleDateString("el-GR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: TZ });
+	const time = d.toLocaleTimeString("el-GR", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: TZ });
 	return `${date} ${time}`;
 }
 

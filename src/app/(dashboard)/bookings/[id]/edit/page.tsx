@@ -35,6 +35,8 @@ export default async function EditBookingPage({ params }: PageProps) {
       notes: bookings.notes,
       realPrice: bookings.realPrice,
       declaredPrice: bookings.declaredPrice,
+      assignedAt: bookings.assignedAt,
+      createdAt: bookings.createdAt,
     })
     .from(bookings)
     .where(eq(bookings.id, bookingId))
@@ -71,6 +73,8 @@ export default async function EditBookingPage({ params }: PageProps) {
         notes: booking.notes,
         realPrice: booking.realPrice,
         declaredPrice: booking.declaredPrice,
+        assignedAt: booking.assignedAt?.toISOString() ?? null,
+        createdAt: booking.createdAt?.toISOString() ?? null,
       }}
       providers={allProviders}
     />
