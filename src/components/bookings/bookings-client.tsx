@@ -74,6 +74,7 @@ export type BookingRow = {
 	partnerAssignmentPrice: string | null;
 	linkedBookingId: number | null;
 	isReturnTrip: boolean | null;
+	approved: boolean;
 	createdAt: string;
 	updatedAt: string;
 };
@@ -89,6 +90,7 @@ type BookingsClientProps = {
 	drivers: Driver[];
 	vehicles: Vehicle[];
 	partners: Partner[];
+	role: "admin" | "developer";
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -216,6 +218,7 @@ export default function BookingsClient({
 	drivers,
 	vehicles,
 	partners,
+	role,
 }: BookingsClientProps) {
 	const router = useRouter();
 
@@ -269,6 +272,22 @@ export default function BookingsClient({
 	const [pageSize, setPageSize] = useState(20);
 	const [filtersOpen, setFiltersOpen] = useState(false);
 	const [columnConfig, setColumnConfig] = useState<BookingColumn[]>(DEFAULT_BOOKING_COLUMNS);
+	const [approvingId, setApprovingId] = useState<number | null>(null);
+
+	async function handleApprove(e: React.MouseEvent, bookingId: number) {
+		e.stopPropagation();
+		setApprovingId(bookingId);
+		try {
+			const res = await fetch(`/api/bookings/${bookingId}/approve`, { method: "POST" });
+			if (res.ok) {
+				setBookingsList((prev) =>
+					prev.map((b) => (b.id === bookingId ? { ...b, approved: true } : b)),
+				);
+			}
+		} finally {
+			setApprovingId(null);
+		}
+	}
 
 	useEffect(() => {
 		setColumnConfig(loadBookingColumns());
@@ -450,7 +469,7 @@ export default function BookingsClient({
 	const totalDiff = parseFloat(totals.difference);
 
 	const visibleCols = columnConfig.filter((c) => c.visible);
-	const colCount = 1 + visibleCols.length;
+	const colCount = 1 + visibleCols.length + (role === "developer" ? 1 : 0);
 
 	const colDefs: Record<string, {
 		headClass: string;
@@ -649,6 +668,9 @@ export default function BookingsClient({
 											</TableHead>
 										);
 									})}
+									{role === "developer" && (
+										<TableHead className="font-extrabold bg-muted text-[#333333] px-4 py-3">Ενέργειες</TableHead>
+									)}
 								</TableRow>
 							</TableHeader>
 							<TableBody>
@@ -661,6 +683,7 @@ export default function BookingsClient({
 													{colDefs[col.key]?.skeleton}
 												</React.Fragment>
 											))}
+											{role === "developer" && <TableCell />}
 										</TableRow>
 									))}
 								{!loading && fetchError && (
@@ -681,7 +704,7 @@ export default function BookingsClient({
 									paginatedList.map((b) => (
 										<TableRow
 											key={b.id}
-											className="cursor-pointer hover:bg-muted/50"
+											className={`cursor-pointer hover:bg-muted/50${!b.approved ? " opacity-60 bg-amber-50" : ""}`}
 											onClick={() => router.push(`/bookings/${b.id}`)}
 										>
 											<TableCell className="font-mono text-sm">{b.id}</TableCell>
@@ -690,6 +713,21 @@ export default function BookingsClient({
 													{colDefs[col.key]?.cell(b)}
 												</React.Fragment>
 											))}
+											{role === "developer" && (
+												<TableCell onClick={(e) => e.stopPropagation()}>
+													{!b.approved && (
+														<Button
+															size="sm"
+															variant="outline"
+															className="text-green-700 border-green-400 hover:bg-green-50"
+															disabled={approvingId === b.id}
+															onClick={(e) => handleApprove(e, b.id)}
+														>
+															{approvingId === b.id ? "..." : "Έγκριση"}
+														</Button>
+													)}
+												</TableCell>
+											)}
 										</TableRow>
 									))}
 							</TableBody>

@@ -1,9 +1,12 @@
 import BookingsClient from '@/components/bookings/bookings-client'
 import { db } from '@/lib/db'
 import { drivers, partners, providers, vehicles } from '@/lib/db/schema'
+import { requireAuth } from '@/lib/auth'
 import { asc } from 'drizzle-orm'
 
 export default async function BookingsPage() {
+  const { user } = await requireAuth()
+
   const [allProviders, allDrivers, allVehicles, allPartners] = await Promise.all([
     db.select().from(providers).orderBy(asc(providers.name)),
     db.select({ id: drivers.id, fullName: drivers.fullName }).from(drivers).orderBy(asc(drivers.fullName)),
@@ -17,6 +20,7 @@ export default async function BookingsPage() {
       drivers={allDrivers}
       vehicles={allVehicles}
       partners={allPartners}
+      role={user.role}
     />
   )
 }
