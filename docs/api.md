@@ -3,6 +3,7 @@
 ## Authentication
 
 ### Admin session (UI)
+
 All dashboard routes protected via middleware. Session stored in `tt_session` HttpOnly cookie (SameSite=Strict, Secure in production).
 
 ```
@@ -22,49 +23,58 @@ Body: { currentPassword, newPassword }
 ## Intake API (External Email Parser)
 
 All requests require:
+
 ```
 Authorization: Bearer <INTAKE_API_KEY>
 ```
+
 Token validated in `src/lib/intake-auth.ts`.
 
 ### Create booking
+
 ```
 POST /api/intake/booking
 ```
+
 Body:
+
 ```json
 {
-  "provider_email":       "bookings@airportstaxitransfers.com",
+  "provider_email": "bookings@airportstaxitransfers.com",
   "provider_booking_ref": "ATT-123456",
-  "pickup_datetime":      "2026-04-10T14:30:00Z",
-  "flight_number":        "A3 601",
-  "pickup_location":      "Thessaloniki Airport",
-  "dropoff_location":     "Aristotelous Square 1",
-  "passenger_count":      3,
-  "vehicle_type":         "van",
-  "baby_seat":            false,
-  "booster_seat":         false,
-  "customer_name":        "John Smith",
-  "customer_phone":       "+44 7911 123456",
-  "customer_email":       "john@example.com",
-  "payment_method":       "credit_card",
-  "notes":                "Late night arrival",
-  "real_price":           45.00,
-  "is_return_trip":       false,
-  "linked_provider_ref":  null
+  "pickup_datetime": "2026-04-10T14:30:00Z",
+  "flight_number": "A3 601",
+  "pickup_location": "Thessaloniki Airport",
+  "dropoff_location": "Aristotelous Square 1",
+  "passenger_count": 3,
+  "vehicle_type": "van",
+  "baby_seat": false,
+  "booster_seat": false,
+  "customer_name": "John Smith",
+  "customer_phone": "+44 7911 123456",
+  "customer_email": "john@example.com",
+  "payment_method": "credit_card",
+  "notes": "Late night arrival",
+  "real_price": 45.0,
+  "is_return_trip": false,
+  "linked_provider_ref": null
 }
 ```
+
 All fields except `provider_email`, `provider_booking_ref`, `pickup_datetime`, `pickup_location`, `dropoff_location`, `vehicle_type`, `customer_name` are nullable.
 
 Response: `201 { id, status: "pending" }`
 
 ### Update booking
+
 ```
 PUT /api/intake/booking
 ```
+
 Body: same structure as POST. `provider_email` + `provider_booking_ref` identify the booking. Only include changed fields (all fields optional except identifiers).
 
 Behavior:
+
 - Status `pending` → updates fields, stays `pending`
 - Status `confirmed` + `pickup_datetime > NOW()` → updates fields, reverts to `pending`, clears assignment
 - Status `confirmed` + `pickup_datetime <= NOW()` → 409 Conflict
@@ -74,16 +84,20 @@ Behavior:
 Response: `200 { id, status }`
 
 ### Cancel booking
+
 ```
 DELETE /api/intake/booking
 ```
+
 Body:
+
 ```json
 {
-  "provider_email":       "bookings@airportstaxitransfers.com",
+  "provider_email": "bookings@airportstaxitransfers.com",
   "provider_booking_ref": "ATT-123456"
 }
 ```
+
 Response: `200 { id, status: "cancelled" }`
 
 ---
@@ -91,6 +105,7 @@ Response: `200 { id, status: "cancelled" }`
 ## Agent API (AI Microservice)
 
 All requests require two headers:
+
 ```
 X-Agent-Timestamp: <unix seconds>
 X-Agent-Signature: <hex HMAC-SHA256>
@@ -100,6 +115,7 @@ Signature is computed over: `timestamp + "." + METHOD + "." + pathname + "." + b
 Secret key: `AI_AGENT_SECRET` env var. Requests older than 5 minutes are rejected.
 
 Example (Python):
+
 ```python
 import hmac, hashlib, time, json, requests
 
@@ -112,26 +128,33 @@ def agent_headers(method, path, body_dict, secret):
 ```
 
 ### Create booking
+
 ```
 POST /api/agent/booking
 ```
+
 Body: same fields as Intake API POST. `provider_email` or `provider_id` are optional.  
 Auto-generates `provider_booking_ref` if omitted (`AGENT-<timestamp>`).  
 Response: `201 { id, status: "pending" }`
 
 ### Update booking
+
 ```
 PUT /api/agent/booking
 ```
-Body: `{ id, ...fields }` — only include fields to change.  
+
+Body: identify booking with `provider_email` or `provider_id` + `provider_booking_ref`, then include only changed fields.  
+Optional: `updated_provider_booking_ref` to change the booking ref itself.  
 Confirmed bookings with future pickup revert to `pending` and clear assignment (matches intake behaviour).  
 Completed or cancelled bookings return `409`.  
 Response: `200 { id, status }`
 
 ### Change status
+
 ```
 PATCH /api/agent/booking
 ```
+
 Body: `{ id, status }` — allowed transitions: `pending→confirmed|cancelled`, `confirmed→pending|completed|cancelled`.  
 Response: `200 { id, status }`
 
@@ -142,6 +165,7 @@ Response: `200 { id, status }`
 All routes require valid session cookie.
 
 ### Bookings
+
 ```
 GET    /api/bookings          ?status=&provider=&driver=&vehicle=&partner=&from=&to=&search=
 GET    /api/bookings/:id
@@ -153,6 +177,7 @@ GET    /api/bookings/:id/pdf  (returns PDF stream)
 ```
 
 ### Drivers
+
 ```
 GET    /api/drivers
 GET    /api/drivers/:id
@@ -162,6 +187,7 @@ DELETE /api/drivers/:id  (soft delete — sets active=false)
 ```
 
 ### Vehicles
+
 ```
 GET    /api/vehicles
 GET    /api/vehicles/:id
@@ -171,6 +197,7 @@ DELETE /api/vehicles/:id  (soft delete)
 ```
 
 ### Partners
+
 ```
 GET    /api/partners
 GET    /api/partners/:id
@@ -180,6 +207,7 @@ DELETE /api/partners/:id
 ```
 
 ### Providers
+
 ```
 GET    /api/providers
 GET    /api/providers/:id
@@ -191,6 +219,7 @@ DELETE /api/providers/:id/emails/:emailId
 ```
 
 ### Micro Expenses
+
 ```
 GET    /api/micro-expenses    ?driver=&from=&to=
 GET    /api/micro-expenses/:id
@@ -200,6 +229,7 @@ DELETE /api/micro-expenses/:id
 ```
 
 ### Custom Fields
+
 ```
 GET    /api/custom-fields?entity=booking
 POST   /api/custom-fields     { entityType, name, label, fieldType, options, required, sortOrder }

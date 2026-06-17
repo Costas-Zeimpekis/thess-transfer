@@ -45,34 +45,39 @@ X-Agent-Signature: <HMAC-SHA256 hex string>
 Place a **Code node** (JavaScript) before every HTTP Request node. It computes the timestamp and signature and passes them forward.
 
 ```javascript
-const crypto = require('crypto');
+const crypto = require("crypto");
 
 const secret = $env.AI_AGENT_SECRET;
 const method = "POST"; // change to PUT or PATCH as needed
-const path   = "/api/agent/booking";
-const body   = JSON.stringify($input.first().json.bookingData);
+const path = "/api/agent/booking";
+const body = JSON.stringify($input.first().json.bookingData);
 
 const timestamp = Math.floor(Date.now() / 1000).toString();
-const payload   = `${timestamp}.${method}.${path}.${body}`;
-const signature = crypto.createHmac('sha256', secret).update(payload).digest('hex');
+const payload = `${timestamp}.${method}.${path}.${body}`;
+const signature = crypto
+  .createHmac("sha256", secret)
+  .update(payload)
+  .digest("hex");
 
-return [{
-  json: {
-    ...$input.first().json,
-    _timestamp: timestamp,
-    _signature:  signature,
-    _body:       body,
-  }
-}];
+return [
+  {
+    json: {
+      ...$input.first().json,
+      _timestamp: timestamp,
+      _signature: signature,
+      _body: body,
+    },
+  },
+];
 ```
 
 Then in the **HTTP Request node** that follows, add these headers using expressions:
 
-| Header | Value |
-|---|---|
+| Header              | Value                    |
+| ------------------- | ------------------------ |
 | `X-Agent-Timestamp` | `{{ $json._timestamp }}` |
 | `X-Agent-Signature` | `{{ $json._signature }}` |
-| `Content-Type` | `application/json` |
+| `Content-Type`      | `application/json`       |
 
 And set the body to: `{{ $json._body }}`
 
@@ -83,7 +88,7 @@ And set the body to: `{{ $json._body }}`
 Store the secret as an **n8n environment variable** — never hardcode it in a node.
 
 1. Go to **Settings → Environment Variables**
-2. Add: `AI_AGENT_SECRET` = *(value provided separately)*
+2. Add: `AI_AGENT_SECRET` = _(value provided separately)_
 
 Access it in Code nodes with `$env.AI_AGENT_SECRET`.
 
@@ -106,21 +111,21 @@ Triggered when a new booking email arrives.
 
 ```json
 {
-  "pickup_datetime":      "2026-05-15T10:00:00Z",
-  "pickup_location":      "Thessaloniki Airport",
-  "dropoff_location":     "Aristotelous Square 1",
-  "vehicle_type":         "car",
-  "customer_name":        "John Doe",
-  "customer_phone":       "+30 6912345678",
-  "customer_email":       "john@example.com",
-  "passenger_count":      2,
-  "flight_number":        "A3 601",
-  "payment_method":       "cash",
-  "real_price":           45.00,
-  "notes":                "Late night arrival",
-  "provider_email":       "bookings@provider.com",
+  "pickup_datetime": "2026-05-15T10:00:00Z",
+  "pickup_location": "Thessaloniki Airport",
+  "dropoff_location": "Aristotelous Square 1",
+  "vehicle_type": "car",
+  "customer_name": "John Doe",
+  "customer_phone": "+30 6912345678",
+  "customer_email": "john@example.com",
+  "passenger_count": 2,
+  "flight_number": "A3 601",
+  "payment_method": "cash",
+  "real_price": 45.0,
+  "notes": "Late night arrival",
+  "provider_email": "bookings@provider.com",
   "provider_booking_ref": "REF-123456",
-  "is_return_trip":       false
+  "is_return_trip": false
 }
 ```
 
@@ -140,17 +145,22 @@ Triggered when a modification email arrives for an existing booking.
 **Method:** `PUT`  
 **URL:** `https://thess-transfer.vercel.app/api/agent/booking`
 
-Send `id` plus only the fields that changed:
+Send `provider_email` (or `provider_id`) + `provider_booking_ref`, then only the fields that changed:
 
 ```json
 {
-  "id":              27,
+  "provider_email": "bookings@provider.com",
+  "provider_booking_ref": "REF-123456",
+  "updated_provider_booking_ref": "REF-123456-REV2",
   "pickup_datetime": "2026-05-15T11:00:00Z",
-  "notes":           "Flight delayed by 1 hour"
+  "notes": "Flight delayed by 1 hour"
 }
 ```
 
+`updated_provider_booking_ref` is optional and only needed when the provider changes the reference.
+
 **Rules:**
+
 - Confirmed bookings with a future pickup will automatically revert to `pending` and clear the assignment
 - Completed or cancelled bookings return `409` — do not attempt to update them
 
@@ -167,19 +177,19 @@ Triggered when a cancellation email arrives, or when the agent determines a stat
 
 ```json
 {
-  "id":     27,
+  "id": 27,
   "status": "cancelled"
 }
 ```
 
 **Allowed transitions:**
 
-| Current | Can move to |
-|---|---|
-| `pending` | `confirmed`, `cancelled` |
+| Current     | Can move to                         |
+| ----------- | ----------------------------------- |
+| `pending`   | `confirmed`, `cancelled`            |
 | `confirmed` | `pending`, `completed`, `cancelled` |
-| `completed` | — |
-| `cancelled` | — |
+| `completed` | —                                   |
+| `cancelled` | —                                   |
 
 **Response:** `200` — full updated booking object
 
@@ -187,11 +197,11 @@ Triggered when a cancellation email arrives, or when the agent determines a stat
 
 ## Enum reference
 
-| Field | Allowed values |
-|---|---|
-| `vehicle_type` | `car`, `van`, `bus` |
-| `payment_method` | `cash`, `paypal`, `credit_card`, `bank`, `paid` |
-| `status` | `pending`, `confirmed`, `completed`, `cancelled` |
+| Field            | Allowed values                                   |
+| ---------------- | ------------------------------------------------ |
+| `vehicle_type`   | `car`, `van`, `bus`                              |
+| `payment_method` | `cash`, `paypal`, `credit_card`, `bank`, `paid`  |
+| `status`         | `pending`, `confirmed`, `completed`, `cancelled` |
 
 > All datetime fields must be **ISO 8601 UTC**: `2026-05-15T10:00:00Z`
 
@@ -201,21 +211,21 @@ Triggered when a cancellation email arrives, or when the agent determines a stat
 
 Give this list to the AI node as extraction instructions:
 
-| Field | What to look for |
-|---|---|
-| `customer_name` | Passenger / traveller full name |
-| `pickup_datetime` | Date and time of pickup — convert to UTC ISO 8601 |
-| `pickup_location` | Origin / from address |
-| `dropoff_location` | Destination / to address |
-| `vehicle_type` | Type of vehicle (`car`, `van`, or `bus`) |
-| `passenger_count` | Number of passengers |
-| `flight_number` | Flight code if it's an airport transfer |
-| `payment_method` | How the trip is paid |
-| `real_price` | Price stated in the email (number) |
-| `provider_email` | The sender's email address |
-| `provider_booking_ref` | The provider's own booking reference |
-| `notes` | Any special requests or remarks |
-| `is_return_trip` | `true` if this is a return leg |
+| Field                  | What to look for                                  |
+| ---------------------- | ------------------------------------------------- |
+| `customer_name`        | Passenger / traveller full name                   |
+| `pickup_datetime`      | Date and time of pickup — convert to UTC ISO 8601 |
+| `pickup_location`      | Origin / from address                             |
+| `dropoff_location`     | Destination / to address                          |
+| `vehicle_type`         | Type of vehicle (`car`, `van`, or `bus`)          |
+| `passenger_count`      | Number of passengers                              |
+| `flight_number`        | Flight code if it's an airport transfer           |
+| `payment_method`       | How the trip is paid                              |
+| `real_price`           | Price stated in the email (number)                |
+| `provider_email`       | The sender's email address                        |
+| `provider_booking_ref` | The provider's own booking reference              |
+| `notes`                | Any special requests or remarks                   |
+| `is_return_trip`       | `true` if this is a return leg                    |
 
 ---
 
@@ -252,12 +262,12 @@ For modifications and cancellations:
 
 ## Error responses
 
-| HTTP code | Meaning |
-|---|---|
-| `400` | Missing required fields or invalid status transition |
-| `401` | Invalid or expired signature — check secret and timestamp |
-| `404` | Booking not found |
-| `409` | Booking is completed or cancelled — cannot be modified |
+| HTTP code | Meaning                                                   |
+| --------- | --------------------------------------------------------- |
+| `400`     | Missing required fields or invalid status transition      |
+| `401`     | Invalid or expired signature — check secret and timestamp |
+| `404`     | Booking not found                                         |
+| `409`     | Booking is completed or cancelled — cannot be modified    |
 
 ---
 
