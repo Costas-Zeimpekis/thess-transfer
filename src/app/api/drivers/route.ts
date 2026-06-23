@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { drivers } from '@/lib/db/schema'
-import { asc } from 'drizzle-orm'
+import { asc, eq } from 'drizzle-orm'
 
 export async function GET() {
   try {
@@ -14,6 +14,7 @@ export async function GET() {
   const rows = await db
     .select()
     .from(drivers)
+    .where(eq(drivers.active, true))
     .orderBy(asc(drivers.fullName))
 
   return NextResponse.json(rows)

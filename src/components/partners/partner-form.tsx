@@ -2,11 +2,21 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from '@/components/ui/dialog'
 
 type PartnerFormProps = {
   id?: string
@@ -22,6 +32,7 @@ export default function PartnerForm({ id }: PartnerFormProps) {
   const [phone, setPhone] = useState('')
   const [contactInfo, setContactInfo] = useState('')
   const [loading, setLoading] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [fetching, setFetching] = useState(isEdit)
   const [error, setError] = useState('')
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
@@ -64,6 +75,23 @@ export default function PartnerForm({ id }: PartnerFormProps) {
 
     loadPartner()
   }, [id, isEdit])
+
+  async function handleDelete() {
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/partners/${id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const data = await res.json()
+        setError(data.error ?? 'Σφάλμα διαγραφής.')
+        return
+      }
+      router.push('/partners')
+    } catch {
+      setError('Σφάλμα διαγραφής.')
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -115,6 +143,32 @@ export default function PartnerForm({ id }: PartnerFormProps) {
         <h1 className="text-2xl font-semibold">
           {isEdit ? 'Επεξεργασία Συνεργάτη' : 'Νέος Συνεργάτης'}
         </h1>
+        {isEdit && (
+          <div className="ml-auto">
+            <Dialog>
+              <DialogTrigger render={<Button variant="destructive" size="sm" disabled={loading || deleting} />}>
+                <Trash2 className="h-4 w-4 mr-2" />
+                Διαγραφή
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Διαγραφή Συνεργάτη</DialogTitle>
+                  <DialogDescription>
+                    Είστε σίγουροι ότι θέλετε να διαγράψετε τον συνεργάτη <strong>{name}</strong>; Η ενέργεια αυτή δεν μπορεί να αναιρεθεί.
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <DialogClose render={<Button variant="outline" disabled={deleting} />}>
+                    Ακύρωση
+                  </DialogClose>
+                  <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+                    {deleting ? 'Διαγραφή...' : 'Διαγραφή'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+        )}
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
