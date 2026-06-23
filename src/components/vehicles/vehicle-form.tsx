@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -13,6 +13,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from '@/components/ui/dialog'
 
 type VehicleFormProps = {
   id?: string
@@ -28,6 +38,7 @@ export default function VehicleForm({ id }: VehicleFormProps) {
   const [brand, setBrand] = useState('')
   const [active, setActive] = useState(true)
   const [loading, setLoading] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [fetching, setFetching] = useState(isEdit)
   const [error, setError] = useState('')
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
@@ -69,6 +80,24 @@ export default function VehicleForm({ id }: VehicleFormProps) {
 
     loadVehicle()
   }, [id, isEdit])
+
+  async function handleDelete() {
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/vehicles/${id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const data = await res.json()
+        setError(data.error ?? 'Σφάλμα διαγραφής.')
+        return
+      }
+      router.push('/vehicles')
+      router.refresh()
+    } catch {
+      setError('Σφάλμα διαγραφής.')
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -120,6 +149,32 @@ export default function VehicleForm({ id }: VehicleFormProps) {
         <h1 className="text-2xl font-semibold">
           {isEdit ? 'Επεξεργασία Οχήματος' : 'Νέο Όχημα'}
         </h1>
+        {isEdit && (
+          <div className="ml-auto">
+            <Dialog>
+              <DialogTrigger render={<Button variant="destructive" size="sm" disabled={loading || deleting} />}>
+                <Trash2 className="h-4 w-4 mr-2" />
+                Διαγραφή
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Διαγραφή Οχήματος</DialogTitle>
+                  <DialogDescription>
+                    Είστε σίγουροι ότι θέλετε να διαγράψετε το όχημα <strong>{name}</strong>; Η ενέργεια αυτή δεν μπορεί να αναιρεθεί.
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <DialogClose render={<Button variant="outline" disabled={deleting} />}>
+                    Ακύρωση
+                  </DialogClose>
+                  <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+                    {deleting ? 'Διαγραφή...' : 'Διαγραφή'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+        )}
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">

@@ -91,6 +91,7 @@ export default function DriverForm({ id }: DriverFormProps) {
         return
       }
       router.push('/drivers')
+      router.refresh()
     } catch {
       setError('Σφάλμα διαγραφής.')
     } finally {
