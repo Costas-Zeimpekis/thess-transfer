@@ -130,32 +130,56 @@ export async function POST(request: Request) {
     );
   }
 
-  const result = await db
-    .insert(bookings)
-    .values({
-      providerBookingRef: resolvedRef,
-      providerId: resolvedProviderId,
-      source: "automatic",
-      status: "pending",
-      arrivalDatetime: parseAthensDatetime(pickup_datetime),
-      flightNumber: flight_number ?? null,
-      pickupLocation: pickup_location,
-      dropoffLocation: dropoff_location,
-      passengerCount: passenger_count ?? 1,
-      vehicleType: vehicle_type,
-      babySeat: baby_seat ?? 0,
-      boosterSeat: booster_seat ?? 0,
-      customerName: customer_name,
-      customerPhone: customer_phone ?? null,
-      customerEmail: customer_email ?? null,
-      paymentMethod: payment_method ?? null,
-      notes: notes ?? null,
-      realPrice: real_price != null ? String(real_price) : null,
-      isReturnTrip: is_return_trip ?? false,
-    })
-    .returning();
-
-  const booking = result[0];
+  let booking;
+  try {
+    const result = await db
+      .insert(bookings)
+      .values({
+        providerBookingRef: resolvedRef,
+        providerId: resolvedProviderId,
+        source: "automatic",
+        status: "pending",
+        arrivalDatetime: parseAthensDatetime(pickup_datetime),
+        flightNumber: flight_number ?? null,
+        pickupLocation: pickup_location,
+        dropoffLocation: dropoff_location,
+        passengerCount: passenger_count ?? 1,
+        vehicleType: vehicle_type,
+        babySeat: baby_seat ?? 0,
+        boosterSeat: booster_seat ?? 0,
+        customerName: customer_name,
+        customerPhone: customer_phone ?? null,
+        customerEmail: customer_email ?? null,
+        paymentMethod: payment_method ?? null,
+        notes: notes ?? null,
+        realPrice: real_price != null ? String(real_price) : null,
+        isReturnTrip: is_return_trip ?? false,
+      })
+      .returning();
+    booking = result[0];
+  } catch (err: unknown) {
+    // PostgreSQL unique constraint violation (race condition: two identical requests in flight)
+    if (
+      typeof err === "object" &&
+      err !== null &&
+      "code" in err &&
+      (err as { code: string }).code === "23505"
+    ) {
+      await log(
+        "error",
+        "POST /api/agent/booking",
+        `Duplicate booking ref "${resolvedRef}" (race condition) for provider id ${resolvedProviderId ?? "none"} — rejected`,
+        body,
+      );
+      return NextResponse.json(
+        {
+          error: `Booking ref "${resolvedRef}" already exists for this provider`,
+        },
+        { status: 409 },
+      );
+    }
+    throw err;
+  }
 
   await db.insert(bookingHistory).values({
     bookingId: booking.id,
