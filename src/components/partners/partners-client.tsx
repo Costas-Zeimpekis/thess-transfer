@@ -4,8 +4,19 @@ import React from "react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Trash2 } from "lucide-react";
 import { FaSort, FaSortDown, FaSortUp, FaSlidersH, FaTimes } from "react-icons/fa";
 import { Button, buttonVariants } from "@/components/ui/button";
+import {
+	Dialog,
+	DialogTrigger,
+	DialogContent,
+	DialogHeader,
+	DialogTitle,
+	DialogDescription,
+	DialogFooter,
+	DialogClose,
+} from "@/components/ui/dialog";
 import DataPagination from "@/components/ui/data-pagination";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -56,6 +67,8 @@ export default function PartnersClient({
 	const [page, setPage] = useState(1);
 	const [pageSize, setPageSize] = useState(20);
 	const [filtersOpen, setFiltersOpen] = useState(false);
+	const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+	const [bulkDeleting, setBulkDeleting] = useState(false);
 
 	const [searchName, setSearchName] = useState("");
 	const [searchEmail, setSearchEmail] = useState("");
@@ -65,6 +78,14 @@ export default function PartnersClient({
 	const [columnConfig, setColumnConfig] = useState<PartnerColumn[]>(DEFAULT_PARTNER_COLUMNS);
 
 	useEffect(() => { setColumnConfig(loadPartnerColumns()); }, []);
+
+	async function handleBulkDelete() {
+		setBulkDeleting(true);
+		await Promise.all([...selectedIds].map((id) => fetch(`/api/partners/${id}`, { method: "DELETE" })));
+		setSelectedIds(new Set());
+		setBulkDeleting(false);
+		router.refresh();
+	}
 
 	function handleApply() {
 		setPage(1);
@@ -182,6 +203,30 @@ export default function PartnersClient({
 				<div className="flex items-center gap-3 mb-6">
 					<Navigation />
 					<div className="flex-1" />
+					{selectedIds.size > 0 && (
+						<Dialog>
+							<DialogTrigger render={<Button variant="destructive" size="sm" disabled={bulkDeleting} />}>
+								<Trash2 className="h-4 w-4 mr-2" />
+								Διαγραφή ({selectedIds.size})
+							</DialogTrigger>
+							<DialogContent>
+								<DialogHeader>
+									<DialogTitle>Μαζική Διαγραφή Συνεργατών</DialogTitle>
+									<DialogDescription>
+										Είστε σίγουροι ότι θέλετε να διαγράψετε {selectedIds.size} συνεργάτ{selectedIds.size === 1 ? "η" : "ες"}; Η ενέργεια αυτή δεν μπορεί να αναιρεθεί.
+									</DialogDescription>
+								</DialogHeader>
+								<DialogFooter>
+									<DialogClose render={<Button variant="outline" disabled={bulkDeleting} />}>
+										Ακύρωση
+									</DialogClose>
+									<Button variant="destructive" onClick={handleBulkDelete} disabled={bulkDeleting}>
+										{bulkDeleting ? "Διαγραφή..." : "Διαγραφή"}
+									</Button>
+								</DialogFooter>
+							</DialogContent>
+						</Dialog>
+					)}
 					<Link href="/partners/new" className={buttonVariants()}>
 						Νέος Συνεργάτης
 					</Link>
@@ -191,8 +236,20 @@ export default function PartnersClient({
 					<Table>
 						<TableHeader className="sticky top-0 z-10 [&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-muted">
 							<TableRow className="bg-muted">
+								<TableHead className="w-10 px-3">
+									<input
+										type="checkbox"
+										className="h-4 w-4"
+										checked={paginatedPartners.length > 0 && paginatedPartners.every((p) => selectedIds.has(p.id))}
+										onChange={(e) => {
+											const next = new Set(selectedIds);
+											paginatedPartners.forEach((p) => e.target.checked ? next.add(p.id) : next.delete(p.id));
+											setSelectedIds(next);
+										}}
+									/>
+								</TableHead>
 								<TableHead
-									className="font-extrabold overflow-hidden p-0 cursor-pointer select-none w-[22px]"
+									className="font-extrabold overflow-hidden p-0 cursor-pointer select-none w-5.5"
 									onClick={() => handleSort("id")}
 								>
 									<div
@@ -220,7 +277,7 @@ export default function PartnersClient({
 							{filteredAndSorted.length === 0 && (
 								<TableRow>
 									<TableCell
-										colSpan={1 + visibleCols.length}
+										colSpan={2 + visibleCols.length}
 										className="text-center text-muted-foreground py-8"
 									>
 										Δεν βρέθηκαν συνεργάτες
@@ -233,6 +290,18 @@ export default function PartnersClient({
 									className="cursor-pointer hover:bg-muted/50"
 									onClick={() => router.push(`/partners/${partner.id}`)}
 								>
+									<TableCell className="px-3" onClick={(e) => e.stopPropagation()}>
+										<input
+											type="checkbox"
+											className="h-4 w-4"
+											checked={selectedIds.has(partner.id)}
+											onChange={(e) => {
+												const next = new Set(selectedIds);
+												e.target.checked ? next.add(partner.id) : next.delete(partner.id);
+												setSelectedIds(next);
+											}}
+										/>
+									</TableCell>
 									<TableCell className="font-mono text-sm">{partner.id}</TableCell>
 									{visibleCols.map((col) => (
 										<React.Fragment key={col.key}>

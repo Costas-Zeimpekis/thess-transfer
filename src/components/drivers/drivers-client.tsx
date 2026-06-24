@@ -4,9 +4,20 @@ import React from "react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Trash2 } from "lucide-react";
 import { FaSort, FaSortDown, FaSortUp, FaSlidersH, FaTimes } from "react-icons/fa";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
+import {
+	Dialog,
+	DialogTrigger,
+	DialogContent,
+	DialogHeader,
+	DialogTitle,
+	DialogDescription,
+	DialogFooter,
+	DialogClose,
+} from "@/components/ui/dialog";
 import DataPagination from "@/components/ui/data-pagination";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -57,6 +68,8 @@ export default function DriversClient({
 	const [page, setPage] = useState(1);
 	const [pageSize, setPageSize] = useState(20);
 	const [filtersOpen, setFiltersOpen] = useState(false);
+	const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+	const [bulkDeleting, setBulkDeleting] = useState(false);
 
 	const [searchName, setSearchName] = useState("");
 	const [searchEmail, setSearchEmail] = useState("");
@@ -72,6 +85,14 @@ export default function DriversClient({
 		phone: "",
 		status: "all" as "all" | "active" | "inactive",
 	});
+
+	async function handleBulkDelete() {
+		setBulkDeleting(true);
+		await Promise.all([...selectedIds].map((id) => fetch(`/api/drivers/${id}`, { method: "DELETE" })));
+		setSelectedIds(new Set());
+		setBulkDeleting(false);
+		router.refresh();
+	}
 
 	function handleApply() {
 		setPage(1);
@@ -207,6 +228,30 @@ export default function DriversClient({
 				<div className="flex items-center gap-3 mb-6">
 					<Navigation />
 					<div className="flex-1" />
+					{selectedIds.size > 0 && (
+						<Dialog>
+							<DialogTrigger render={<Button variant="destructive" size="sm" disabled={bulkDeleting} />}>
+								<Trash2 className="h-4 w-4 mr-2" />
+								Διαγραφή ({selectedIds.size})
+							</DialogTrigger>
+							<DialogContent>
+								<DialogHeader>
+									<DialogTitle>Μαζική Διαγραφή Οδηγών</DialogTitle>
+									<DialogDescription>
+										Είστε σίγουροι ότι θέλετε να διαγράψετε {selectedIds.size} οδηγ{selectedIds.size === 1 ? "ό" : "ούς"}; Η ενέργεια αυτή δεν μπορεί να αναιρεθεί.
+									</DialogDescription>
+								</DialogHeader>
+								<DialogFooter>
+									<DialogClose render={<Button variant="outline" disabled={bulkDeleting} />}>
+										Ακύρωση
+									</DialogClose>
+									<Button variant="destructive" onClick={handleBulkDelete} disabled={bulkDeleting}>
+										{bulkDeleting ? "Διαγραφή..." : "Διαγραφή"}
+									</Button>
+								</DialogFooter>
+							</DialogContent>
+						</Dialog>
+					)}
 					<Link href="/drivers/new" className={buttonVariants()}>
 						Νέος Οδηγός
 					</Link>
@@ -216,6 +261,18 @@ export default function DriversClient({
 					<Table>
 						<TableHeader className="sticky top-0 z-10 [&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-muted">
 							<TableRow className="bg-muted">
+								<TableHead className="w-10 px-3">
+									<input
+										type="checkbox"
+										className="h-4 w-4"
+										checked={paginatedDrivers.length > 0 && paginatedDrivers.every((d) => selectedIds.has(d.id))}
+										onChange={(e) => {
+											const next = new Set(selectedIds);
+											paginatedDrivers.forEach((d) => e.target.checked ? next.add(d.id) : next.delete(d.id));
+											setSelectedIds(next);
+										}}
+									/>
+								</TableHead>
 								<TableHead
 									className="font-extrabold overflow-hidden p-0 cursor-pointer select-none w-5.5"
 									onClick={() => handleSort("id")}
@@ -245,7 +302,7 @@ export default function DriversClient({
 							{filteredAndSorted.length === 0 && (
 								<TableRow>
 									<TableCell
-										colSpan={1 + visibleCols.length}
+										colSpan={2 + visibleCols.length}
 										className="text-center text-muted-foreground py-8"
 									>
 										Δεν βρέθηκαν οδηγοί
@@ -258,6 +315,18 @@ export default function DriversClient({
 									className="cursor-pointer hover:bg-muted/50"
 									onClick={() => router.push(`/drivers/${driver.id}`)}
 								>
+									<TableCell className="px-3" onClick={(e) => e.stopPropagation()}>
+										<input
+											type="checkbox"
+											className="h-4 w-4"
+											checked={selectedIds.has(driver.id)}
+											onChange={(e) => {
+												const next = new Set(selectedIds);
+												e.target.checked ? next.add(driver.id) : next.delete(driver.id);
+												setSelectedIds(next);
+											}}
+										/>
+									</TableCell>
 									<TableCell className="font-mono text-sm">{driver.id}</TableCell>
 									{visibleCols.map((col) => (
 										<React.Fragment key={col.key}>
