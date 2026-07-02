@@ -6,7 +6,7 @@ function getCalendarClient() {
       client_email: process.env.GOOGLE_CALENDAR_CLIENT_EMAIL,
       private_key: process.env.GOOGLE_CALENDAR_PRIVATE_KEY?.replace(/\\n/g, "\n"),
     },
-    scopes: ["https://www.googleapis.com/auth/calendar"],
+    scopes: ["https://www.googleapis.com/auth/calendar.events"],
   });
   return google.calendar({ version: "v3", auth });
 }
