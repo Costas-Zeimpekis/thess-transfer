@@ -135,6 +135,7 @@ POST /api/agent/booking
 
 Body: same fields as Intake API POST. `provider_email` or `provider_id` are optional.  
 Auto-generates `provider_booking_ref` if omitted (`AGENT-<timestamp>`).  
+Created with `approved: true`, so admins see them immediately (no developer approval step).  
 Response: `201 { id, status: "pending" }`
 
 ### Update booking

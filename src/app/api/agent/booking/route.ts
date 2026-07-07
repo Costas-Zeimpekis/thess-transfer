@@ -154,6 +154,7 @@ export async function POST(request: Request) {
         notes: notes ?? null,
         realPrice: real_price != null ? String(real_price) : null,
         isReturnTrip: is_return_trip ?? false,
+        approved: true, // API bookings are auto-approved (visible to admin)
       })
       .returning();
     booking = result[0];
