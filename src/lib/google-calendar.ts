@@ -22,6 +22,7 @@ type BookingForCalendar = {
   customerPhone: string | null;
   customerEmail: string | null;
   arrivalDatetime: Date;
+  endTime: string | null;
   pickupLocation: string;
   dropoffLocation: string;
   flightNumber: string | null;
@@ -84,14 +85,23 @@ function buildEventBody(booking: BookingForCalendar, vehicleLabel: string | null
 
   const description = lines.filter(Boolean).join("\n");
   const start = new Date(booking.arrivalDatetime);
-  // Event ends at the end (23:59) of the same Athens day as the arrival.
+  // Event ends at `endTime` (ώρα λήξης) on the same Athens day as the arrival.
+  // Falls back to arrival + 1h when no end time is set.
   const athensDate = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Europe/Athens",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
   }).format(start);
-  const end = parseAthensDatetime(`${athensDate}T23:59:00`);
+  let end: Date;
+  if (booking.endTime) {
+    end = parseAthensDatetime(`${athensDate}T${booking.endTime}:00`);
+    if (end.getTime() <= start.getTime()) {
+      end = new Date(end.getTime() + 24 * 60 * 60 * 1000);
+    }
+  } else {
+    end = new Date(start.getTime() + 60 * 60 * 1000);
+  }
 
   return {
     summary,
