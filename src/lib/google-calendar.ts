@@ -1,4 +1,8 @@
 import { google } from "googleapis";
+import { eq } from "drizzle-orm";
+import { db } from "@/lib/db";
+import { vehicles } from "@/lib/db/schema";
+import { parseAthensDatetime } from "@/lib/utils";
 
 function getCalendarClient() {
   const auth = new google.auth.GoogleAuth({
@@ -30,7 +34,21 @@ type BookingForCalendar = {
   realPrice: string | null;
   status: string;
   partnerId: number | null;
+  vehicleId: number | null;
 };
+
+async function getVehicleLabel(vehicleId: number | null): Promise<string | null> {
+  if (!vehicleId) return null;
+  const rows = await db
+    .select({ name: vehicles.name, plate: vehicles.plate, brand: vehicles.brand })
+    .from(vehicles)
+    .where(eq(vehicles.id, vehicleId))
+    .limit(1);
+  const v = rows[0];
+  if (!v) return null;
+  const label = [v.brand, v.name].filter(Boolean).join(" ");
+  return label ? `${label} (${v.plate})` : v.plate;
+}
 
 function getEventColorId(booking: BookingForCalendar): string {
   if (booking.status === "cancelled") return "3"; // Grape
@@ -40,7 +58,7 @@ function getEventColorId(booking: BookingForCalendar): string {
   return "7"; // Peacock — car (default)
 }
 
-function buildEventBody(booking: BookingForCalendar) {
+function buildEventBody(booking: BookingForCalendar, vehicleLabel: string | null) {
   const ref = booking.providerBookingRef ?? `#${booking.id}`;
   const summary = `${ref} — ${booking.customerName} | ${booking.pickupLocation} → ${booking.dropoffLocation}`;
 
@@ -55,6 +73,7 @@ function buildEventBody(booking: BookingForCalendar) {
     ``,
     `Επιβάτες: ${booking.passengerCount}`,
     `Όχημα: ${booking.vehicleType}`,
+    vehicleLabel ? `Αυτοκίνητο: ${vehicleLabel}` : null,
     booking.babySeat ? `Baby Seat: ${booking.babySeat}` : null,
     booking.boosterSeat ? `Booster Seat: ${booking.boosterSeat}` : null,
     ``,
@@ -65,7 +84,14 @@ function buildEventBody(booking: BookingForCalendar) {
 
   const description = lines.filter(Boolean).join("\n");
   const start = new Date(booking.arrivalDatetime);
-  const end = new Date(start.getTime() + 60 * 60 * 1000);
+  // Event ends at the end (23:59) of the same Athens day as the arrival.
+  const athensDate = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Athens",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(start);
+  const end = parseAthensDatetime(`${athensDate}T23:59:00`);
 
   return {
     summary,
@@ -81,9 +107,10 @@ export async function createBookingCalendarEvent(
   booking: BookingForCalendar,
 ): Promise<string | null> {
   const calendar = getCalendarClient();
+  const vehicleLabel = await getVehicleLabel(booking.vehicleId);
   const result = await calendar.events.insert({
     calendarId,
-    requestBody: buildEventBody(booking),
+    requestBody: buildEventBody(booking, vehicleLabel),
   });
   return result.data.id ?? null;
 }
@@ -94,9 +121,10 @@ export async function updateBookingCalendarEvent(
   booking: BookingForCalendar,
 ): Promise<void> {
   const calendar = getCalendarClient();
+  const vehicleLabel = await getVehicleLabel(booking.vehicleId);
   await calendar.events.update({
     calendarId,
     eventId,
-    requestBody: buildEventBody(booking),
+    requestBody: buildEventBody(booking, vehicleLabel),
   });
 }
