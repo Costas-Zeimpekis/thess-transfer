@@ -181,9 +181,9 @@ export async function PUT(request: Request, context: RouteContext) {
 	if (flight_number !== undefined)
 		trackChange("flightNumber", flight_number ?? null);
 	if (start_time !== undefined)
-		trackChange("startTime", start_time ?? null);
+		trackChange("startTime", start_time ? parseAthensDatetime(start_time) : null);
 	if (end_time !== undefined)
-		trackChange("endTime", end_time ?? null);
+		trackChange("endTime", end_time ? parseAthensDatetime(end_time) : null);
 	if (pickup_location !== undefined)
 		trackChange("pickupLocation", pickup_location);
 	if (dropoff_location !== undefined)

@@ -73,6 +73,8 @@ source (enum)                -- automatic | manual
 -- Trip
 pickup_datetime
 flight_number
+start_time (timestamptz, nullable)  -- rental start date & time (Ημερομηνία Έναρξης)
+end_time (timestamptz, nullable)    -- rental end date & time (Ημερομηνία Λήξης); drives Google Calendar event end
 pickup_location
 dropoff_location
 passenger_count

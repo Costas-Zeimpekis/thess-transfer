@@ -200,8 +200,8 @@ export default async function BookingPrintPage({ params }: PageProps) {
 				<Section title="Ανάθεση">
 					<div className="grid grid-cols-3 gap-x-8 gap-y-3 mb-3">
 						<Field label="Ημερομηνία Κατάρτισης" value={fmtDatetime(b.createdAt)} />
-						<Field label="Ώρα Έναρξης" value={b.startTime ?? "—"} />
-						<Field label="Ώρα Λήξης" value={b.endTime ?? "—"} />
+						<Field label="Ημερομηνία Έναρξης" value={fmtDatetime(b.startTime)} />
+						<Field label="Ημερομηνία Λήξης" value={fmtDatetime(b.endTime)} />
 					</div>
 					{isPartnerAssigned ? (
 						<div className="grid grid-cols-2 gap-x-8 gap-y-3">

@@ -37,6 +37,11 @@ function fmtDate(val: Date | string | null) {
 	return new Date(val).toLocaleDateString("el-GR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: TZ });
 }
 
+function fmtTime(val: Date | string | null) {
+	if (!val) return "—";
+	return new Date(val).toLocaleTimeString("el-GR", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: TZ });
+}
+
 function fmtIssueDatetime(val: Date | string | null) {
 	if (!val) return "—";
 	const d = new Date(val);
@@ -45,15 +50,12 @@ function fmtIssueDatetime(val: Date | string | null) {
 	return `${date} ${time}`;
 }
 
-function calcDurationHours(start: string | null, end: string | null): string {
+function calcDurationHours(start: Date | string | null, end: Date | string | null): string {
 	if (!start || !end) return "—";
-	const [sh, sm] = start.split(":").map(Number);
-	const [eh, em] = end.split(":").map(Number);
-	if (isNaN(sh) || isNaN(sm) || isNaN(eh) || isNaN(em)) return "—";
-	const diff = (eh * 60 + em) - (sh * 60 + sm);
+	const diff = (new Date(end).getTime() - new Date(start).getTime()) / 60000;
 	if (diff <= 0) return "—";
 	const h = Math.floor(diff / 60);
-	const m = diff % 60;
+	const m = Math.round(diff % 60);
 	return m === 0 ? String(h) : `${h}h ${m}m`;
 }
 
@@ -103,8 +105,8 @@ export default async function BookingContractPrintPage({ params }: PageProps) {
 	if (!rows[0]) notFound();
 	const b = rows[0];
 
-	const startDate = fmtDate(b.arrivalDatetime);
-	const endDate = fmtDate(b.arrivalDatetime);
+	const startDate = fmtDate(b.startTime ?? b.arrivalDatetime);
+	const endDate = fmtDate(b.endTime ?? b.arrivalDatetime);
 	const duration = calcDurationHours(b.startTime, b.endTime);
 	const issuedAt = fmtIssueDatetime(b.assignedAt ?? b.createdAt);
 	const price = b.declaredPrice ? `${parseFloat(b.declaredPrice).toFixed(2)}` : "—";
@@ -153,11 +155,11 @@ export default async function BookingContractPrintPage({ params }: PageProps) {
 						<ContractField labelGr="ΑΦΜ" labelEn="VAT" value={b.driverTaxId ?? "—"} />
 						<div className="grid grid-cols-2 gap-4">
 							<ContractField labelGr="ΗΜ/ΝΙΑ ΕΝΑΡΞΗΣ" labelEn="START DATE" value={startDate} />
-							<ContractField labelGr="ΩΡΑ ΕΝΑΡΞΗΣ" labelEn="START TIME" value={b.startTime ?? "—"} />
+							<ContractField labelGr="ΩΡΑ ΕΝΑΡΞΗΣ" labelEn="START TIME" value={fmtTime(b.startTime)} />
 						</div>
 						<div className="grid grid-cols-2 gap-4">
 							<ContractField labelGr="ΗΜ/ΝΙΑ ΛΗΞΗΣ" labelEn="END DATE" value={endDate} />
-							<ContractField labelGr="ΩΡΑ ΛΗΞΗΣ" labelEn="END TIME" value={b.endTime ?? "—"} />
+							<ContractField labelGr="ΩΡΑ ΛΗΞΗΣ" labelEn="END TIME" value={fmtTime(b.endTime)} />
 						</div>
 						<ContractField labelGr="ΣΥΝΟΛΙΚΗ ΔΙΑΡΚΕΙΑ ΜΙΣΘΩΣΗΣ" labelEn="TOTAL DURATION OF RENTAL" value={duration} />
 						<ContractField labelGr="ΗΜ/ΝΙΑ, ΩΡΑ ΚΑΤΑΡΤΙΣΗΣ" labelEn="DATE, TIME OF ISSUE" value={issuedAt} />

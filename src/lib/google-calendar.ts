@@ -2,7 +2,6 @@ import { google } from "googleapis";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { vehicles } from "@/lib/db/schema";
-import { parseAthensDatetime } from "@/lib/utils";
 
 function getCalendarClient() {
   const auth = new google.auth.GoogleAuth({
@@ -22,7 +21,7 @@ type BookingForCalendar = {
   customerPhone: string | null;
   customerEmail: string | null;
   arrivalDatetime: Date;
-  endTime: string | null;
+  endTime: Date | null;
   pickupLocation: string;
   dropoffLocation: string;
   flightNumber: string | null;
@@ -85,23 +84,11 @@ function buildEventBody(booking: BookingForCalendar, vehicleLabel: string | null
 
   const description = lines.filter(Boolean).join("\n");
   const start = new Date(booking.arrivalDatetime);
-  // Event ends at `endTime` (ώρα λήξης) on the same Athens day as the arrival.
+  // Event ends at `endTime` (ημερομηνία λήξης).
   // Falls back to arrival + 1h when no end time is set.
-  const athensDate = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Europe/Athens",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(start);
-  let end: Date;
-  if (booking.endTime) {
-    end = parseAthensDatetime(`${athensDate}T${booking.endTime}:00`);
-    if (end.getTime() <= start.getTime()) {
-      end = new Date(end.getTime() + 24 * 60 * 60 * 1000);
-    }
-  } else {
-    end = new Date(start.getTime() + 60 * 60 * 1000);
-  }
+  const end = booking.endTime
+    ? new Date(booking.endTime)
+    : new Date(start.getTime() + 60 * 60 * 1000);
 
   return {
     summary,
