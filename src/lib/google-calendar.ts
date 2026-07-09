@@ -1,7 +1,7 @@
 import { google } from "googleapis";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { bookingHistory, drivers, vehicles } from "@/lib/db/schema";
+import { bookingHistory, bookings, drivers, vehicles } from "@/lib/db/schema";
 
 function getCalendarClient() {
   const auth = new google.auth.GoogleAuth({
@@ -84,11 +84,15 @@ function buildEventBody(booking: BookingForCalendar, vehicleLabel: string | null
 
   const description = lines.filter(Boolean).join("\n");
   const start = new Date(booking.arrivalDatetime);
-  // Event ends at `endTime` (ημερομηνία λήξης).
-  // Falls back to arrival + 1h when no end time is set.
-  const end = booking.endTime
+  // Event ends at `endTime` (ημερομηνία λήξης). Falls back to arrival + 1h when
+  // no end time is set, or when the end time is not after the start (bad data) —
+  // otherwise Google rejects the event with "The specified time range is empty."
+  let end = booking.endTime
     ? new Date(booking.endTime)
     : new Date(start.getTime() + 60 * 60 * 1000);
+  if (end.getTime() <= start.getTime()) {
+    end = new Date(start.getTime() + 60 * 60 * 1000);
+  }
 
   return {
     summary,
@@ -143,6 +147,57 @@ async function resolveEventId(
     .orderBy(desc(bookingHistory.createdAt))
     .limit(1);
   return (rows[0]?.changes as Record<string, string> | null)?.eventId ?? null;
+}
+
+// Creates the driver's Google Calendar event for a booking, or updates it if one
+// already exists. Stores the event id on the booking and logs to history on create.
+// No-op when the booking has no driver or the driver has no calendar configured.
+export async function syncBookingCalendarEvent(
+  booking: BookingForCalendar & {
+    driverId: number | null;
+    googleCalendarEventId: string | null;
+  },
+  opts: { changedBy: number | null; source: "manual" | "automatic" },
+): Promise<void> {
+  if (!booking.driverId) return;
+  const [driver] = await db
+    .select({ googleCalendarId: drivers.googleCalendarId })
+    .from(drivers)
+    .where(eq(drivers.id, booking.driverId))
+    .limit(1);
+  const calId = driver?.googleCalendarId;
+  if (!calId) return;
+
+  const eventId = await resolveEventId(booking.id, booking.googleCalendarEventId);
+  if (eventId) {
+    await updateBookingCalendarEvent(calId, eventId, booking).catch(() => null);
+    if (!booking.googleCalendarEventId) {
+      await db
+        .update(bookings)
+        .set({ googleCalendarEventId: eventId })
+        .where(eq(bookings.id, booking.id));
+    }
+    return;
+  }
+
+  const calResult = await createBookingCalendarEvent(calId, booking)
+    .then((id) => ({ ok: true as const, eventId: id }))
+    .catch((err: Error) => ({ ok: false as const, error: err?.message ?? String(err) }));
+  if (calResult.ok && calResult.eventId) {
+    await db
+      .update(bookings)
+      .set({ googleCalendarEventId: calResult.eventId })
+      .where(eq(bookings.id, booking.id));
+  }
+  await db.insert(bookingHistory).values({
+    bookingId: booking.id,
+    action: calResult.ok ? "calendar_event_created" : "calendar_event_failed",
+    source: opts.source,
+    changedBy: opts.changedBy,
+    changes: calResult.ok
+      ? { calendarId: calId, eventId: calResult.eventId }
+      : { calendarId: calId, error: calResult.error },
+  });
 }
 
 const CANCELLED_PREFIX = "❌ ΑΚΥΡΩΘΗΚΕ — ";

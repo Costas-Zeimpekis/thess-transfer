@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { bookings, bookingHistory } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
+import { markBookingCalendarEventCancelled, syncBookingCalendarEvent } from '@/lib/google-calendar'
 
 type RouteContext = { params: Promise<{ id: string }> }
 
@@ -88,6 +89,19 @@ export async function POST(request: Request, context: RouteContext) {
     changedBy: session.user.id,
     changes: body,
   })
+
+  if (type === 'driver') {
+    await syncBookingCalendarEvent(result[0], {
+      changedBy: session.user.id,
+      source: 'manual',
+    })
+  } else if (existing[0].driverId && existing[0].googleCalendarEventId) {
+    // Driver removed (partner / unassign) — cancel the event on the previous driver's calendar
+    await markBookingCalendarEventCancelled(existing[0], {
+      changedBy: session.user.id,
+      source: 'manual',
+    })
+  }
 
   return NextResponse.json(result[0])
 }
