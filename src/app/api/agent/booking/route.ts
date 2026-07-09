@@ -9,6 +9,7 @@ import {
   systemLogs,
 } from "@/lib/db/schema";
 import { parseAthensDatetime } from "@/lib/utils";
+import { markBookingCalendarEventCancelled } from "@/lib/google-calendar";
 
 async function log(
   level: string,
@@ -542,6 +543,7 @@ export async function PATCH(request: Request) {
   const ALLOWED: Record<string, string[]> = {
     pending: ["confirmed", "cancelled"],
     confirmed: ["pending", "completed", "cancelled"],
+    assigned: ["cancelled"],
   };
 
   if (!(ALLOWED[current.status] ?? []).includes(newStatus)) {
@@ -584,6 +586,13 @@ export async function PATCH(request: Request) {
     `Booking #${current.id} status: ${current.status} → ${newStatus} (ref: ${provider_booking_ref})`,
     { bookingId: current.id, from: current.status, to: newStatus, body },
   );
+
+  if (newStatus === "cancelled") {
+    await markBookingCalendarEventCancelled(result[0], {
+      changedBy: null,
+      source: "automatic",
+    });
+  }
 
   return NextResponse.json(result[0]);
 }

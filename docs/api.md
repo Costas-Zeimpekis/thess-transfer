@@ -156,7 +156,7 @@ Response: `200 { id, status }`
 PATCH /api/agent/booking
 ```
 
-Body: `{ id, status }` — allowed transitions: `pending→confirmed|cancelled`, `confirmed→pending|completed|cancelled`.  
+Body: `{ id, status }` — allowed transitions: `pending→confirmed|cancelled`, `confirmed→pending|completed|cancelled`, `assigned→cancelled`.  
 Response: `200 { id, status }`
 
 ---

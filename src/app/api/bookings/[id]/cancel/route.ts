@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { bookings, bookingHistory } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
+import { markBookingCalendarEventCancelled } from '@/lib/google-calendar'
 
 type RouteContext = { params: Promise<{ id: string }> }
 
@@ -48,6 +49,11 @@ export async function POST(_request: Request, context: RouteContext) {
     source: 'manual',
     changedBy: session.user.id,
     changes: null,
+  })
+
+  await markBookingCalendarEventCancelled(result[0], {
+    changedBy: session.user.id,
+    source: 'manual',
   })
 
   return NextResponse.json(result[0])

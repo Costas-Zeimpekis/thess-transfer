@@ -11,7 +11,7 @@ import {
 	providers,
 	vehicles,
 } from "@/lib/db/schema";
-import { createBookingCalendarEvent, updateBookingCalendarEvent } from "@/lib/google-calendar";
+import { createBookingCalendarEvent, markBookingCalendarEventCancelled, updateBookingCalendarEvent } from "@/lib/google-calendar";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -391,7 +391,12 @@ export async function PATCH(request: Request, context: RouteContext) {
 
 	const updated = result[0];
 
-	if (newStatus === "confirmed" && current.driverId) {
+	if (newStatus === "cancelled") {
+		await markBookingCalendarEventCancelled(updated, {
+			changedBy: session.user.id,
+			source: "manual",
+		});
+	} else if (newStatus === "confirmed" && current.driverId) {
 		const driverRows = await db
 			.select({ googleCalendarId: drivers.googleCalendarId })
 			.from(drivers)

@@ -1,7 +1,7 @@
 import { google } from "googleapis";
-import { eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { vehicles } from "@/lib/db/schema";
+import { bookingHistory, drivers, vehicles } from "@/lib/db/schema";
 
 function getCalendarClient() {
   const auth = new google.auth.GoogleAuth({
@@ -51,7 +51,7 @@ async function getVehicleLabel(vehicleId: number | null): Promise<string | null>
 }
 
 function getEventColorId(booking: BookingForCalendar): string {
-  if (booking.status === "cancelled") return "3"; // Grape
+  if (booking.status === "cancelled") return "8"; // Graphite
   if (booking.status === "assigned" && booking.partnerId != null) return "5"; // Banana
   if (booking.vehicleType === "van") return "11"; // Tomato
   if (booking.vehicleType === "bus") return "10"; // Basil
@@ -123,5 +123,76 @@ export async function updateBookingCalendarEvent(
     calendarId,
     eventId,
     requestBody: buildEventBody(booking, vehicleLabel),
+  });
+}
+
+async function resolveEventId(
+  bookingId: number,
+  stored: string | null,
+): Promise<string | null> {
+  if (stored) return stored;
+  const rows = await db
+    .select({ changes: bookingHistory.changes })
+    .from(bookingHistory)
+    .where(
+      and(
+        eq(bookingHistory.bookingId, bookingId),
+        eq(bookingHistory.action, "calendar_event_created"),
+      ),
+    )
+    .orderBy(desc(bookingHistory.createdAt))
+    .limit(1);
+  return (rows[0]?.changes as Record<string, string> | null)?.eventId ?? null;
+}
+
+const CANCELLED_PREFIX = "❌ ΑΚΥΡΩΘΗΚΕ — ";
+
+// Marks the linked Google Calendar event as cancelled by keeping it visible but
+// prepending a "cancelled" marker to its title and greying it out (Graphite).
+// No-op when the booking has no driver, driver calendar, or linked event.
+export async function markBookingCalendarEventCancelled(
+  booking: {
+    id: number;
+    driverId: number | null;
+    googleCalendarEventId: string | null;
+  },
+  opts: { changedBy: number | null; source: "manual" | "automatic" },
+): Promise<void> {
+  if (!booking.driverId) return;
+  const eventId = await resolveEventId(booking.id, booking.googleCalendarEventId);
+  if (!eventId) return;
+  const [driver] = await db
+    .select({ googleCalendarId: drivers.googleCalendarId })
+    .from(drivers)
+    .where(eq(drivers.id, booking.driverId))
+    .limit(1);
+  const calId = driver?.googleCalendarId;
+  if (!calId) return;
+
+  const calendar = getCalendarClient();
+  const res = await calendar.events
+    .get({ calendarId: calId, eventId })
+    .then((ev) => {
+      const current = ev.data.summary ?? "";
+      const summary = current.startsWith(CANCELLED_PREFIX)
+        ? current
+        : `${CANCELLED_PREFIX}${current}`;
+      return calendar.events.patch({
+        calendarId: calId,
+        eventId,
+        requestBody: { summary, colorId: "8" }, // Graphite
+      });
+    })
+    .then(() => ({ ok: true as const }))
+    .catch((err: Error) => ({ ok: false as const, error: err?.message ?? String(err) }));
+
+  await db.insert(bookingHistory).values({
+    bookingId: booking.id,
+    action: res.ok ? "calendar_event_cancelled" : "calendar_event_cancel_failed",
+    source: opts.source,
+    changedBy: opts.changedBy,
+    changes: res.ok
+      ? { calendarId: calId, eventId }
+      : { calendarId: calId, error: res.error },
   });
 }

@@ -18,6 +18,7 @@ any non-completed ──► [intake API CANCEL or manual]   ──► cancelled
 - Intake API UPDATE on `completed` booking → rejected (returns 409)
 - Intake API UPDATE on `confirmed` booking where `pickup_datetime > NOW()` → reverts to `pending`, clears `driver_id`, `vehicle_id`, `partner_id`, `partner_assignment_price`, logs to history
 - Auto-completion runs via Cloudflare Cron Trigger every 30 minutes
+- Cancelling a booking (cancel button, internal PATCH, or intake PATCH) marks the linked Google Calendar event as cancelled by keeping it visible, prepending `❌ ΑΚΥΡΩΘΗΚΕ — ` to its title and greying it out (Graphite / colorId 8). Google Calendar has no strikethrough. No-op when the booking has no driver / driver calendar / linked event. Logged as `calendar_event_cancelled` (or `calendar_event_cancel_failed`) in history.
 
 ## Assignment Logic
 
