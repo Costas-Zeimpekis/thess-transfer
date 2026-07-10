@@ -24,7 +24,19 @@ any non-completed ──► [intake API CANCEL or manual]   ──► cancelled
 - A blank `start_time` is ignored; a blank `end_time` skips validation entirely
 - Enforced on every internal booking mutation: create (`POST /api/bookings`), update (`PUT /api/bookings/[id]`), forward status change to `confirmed`/`assigned`/`completed` (`PATCH /api/bookings/[id]`), and driver/partner assignment (`POST /api/bookings/[id]/assign`). Transitions to `pending`/`cancelled` are not blocked
 - Shared helper: `validateBookingDates()` in `src/lib/utils.ts`; also mirrored client-side in the booking form. Returns a Greek error message on failure (400)
-- Cancelling a booking (cancel button, internal PATCH, or intake PATCH) marks the linked Google Calendar event as cancelled by keeping it visible, prepending `❌ ΑΚΥΡΩΘΗΚΕ — ` to its title and greying it out (Graphite / colorId 8). Google Calendar has no strikethrough. No-op when the booking has no driver / driver calendar / linked event. Logged as `calendar_event_cancelled` (or `calendar_event_cancel_failed`) in history.
+
+### Google Calendar sync
+Two independent calendar events per booking, all logic in `src/lib/google-calendar.ts`:
+
+- **Main company calendar** (`raptis79@gmail.com`, hardcoded as `MAIN_CALENDAR_ID`): event created the moment a booking becomes `confirmed` (regardless of assignment), stored in `google_calendar_main_event_id`. Updated on every subsequent update / status change, cancelled when the booking is cancelled.
+- **Driver calendar** (`drivers.google_calendar_id`): a second event created only once a driver is assigned, stored in `google_calendar_event_id`. Updated on every update, cancelled when the driver is removed or the booking is cancelled.
+- `syncBookingCalendars()` — syncs both (main when confirmed+, driver when a driver is present). Called from `PUT` (on any change), `PATCH` (non-cancel transitions), and the `assign` route (driver assignment).
+- `syncMainCalendarEvent()` — main event only; called by the `assign` route on partner / unassign to refresh the main event while the driver event is removed.
+- `markDriverCalendarEventCancelled()` — cancels only the driver event (driver removed, booking stays active).
+- `markBookingCalendarEventCancelled()` — cancels **both** events (whole booking cancelled: cancel button, internal PATCH, intake PATCH).
+- Cancellation keeps the event visible, prepends `❌ ΑΚΥΡΩΘΗΚΕ — ` to its title and greys it out (Graphite / colorId 8) — Google Calendar has no strikethrough. No-op per calendar when no event exists.
+- History actions: `main_calendar_event_created` / `_failed` / `_cancelled` / `_cancel_failed` for the main calendar; `calendar_event_created` / `_failed` / `_cancelled` / `_cancel_failed` for the driver calendar.
+- **Prerequisite:** the service account (`GOOGLE_CALENDAR_CLIENT_EMAIL`) must be granted write access to `raptis79@gmail.com`, otherwise main-calendar writes fail (logged as `main_calendar_event_failed`).
 
 ## Assignment Logic
 

@@ -104,7 +104,8 @@ linked_booking_id → bookings (self-ref, nullable)
 is_return_trip (bool)
 
 -- Phase B
-google_calendar_event_id (nullable)
+google_calendar_event_id (nullable)        -- driver's calendar event id
+google_calendar_main_event_id (nullable)   -- main company calendar event id
 
 custom_fields (jsonb)
 completed_at

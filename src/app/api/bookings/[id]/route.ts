@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -11,7 +11,7 @@ import {
 	providers,
 	vehicles,
 } from "@/lib/db/schema";
-import { createBookingCalendarEvent, markBookingCalendarEventCancelled, updateBookingCalendarEvent } from "@/lib/google-calendar";
+import { markBookingCalendarEventCancelled, syncBookingCalendars } from "@/lib/google-calendar";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -286,61 +286,14 @@ export async function PUT(request: Request, context: RouteContext) {
 	});
 
 	const updated = result[0];
-	const driverJustAssigned = updated.driverId != null && current.driverId !== updated.driverId;
-	const justConfirmed = current.status !== "confirmed" && updated.status === "confirmed";
-	if (updated.status === "confirmed" && updated.driverId && (justConfirmed || driverJustAssigned)) {
-		const driverRows = await db
-			.select({ googleCalendarId: drivers.googleCalendarId })
-			.from(drivers)
-			.where(eq(drivers.id, updated.driverId))
-			.limit(1);
-		const calId = driverRows[0]?.googleCalendarId;
-		if (calId) {
-			const calResult = await createBookingCalendarEvent(calId, updated)
-				.then((eventId) => ({ ok: true as const, eventId }))
-				.catch((err: Error) => ({ ok: false as const, error: err?.message ?? String(err) }));
-			if (calResult.ok && calResult.eventId) {
-				await db.update(bookings).set({ googleCalendarEventId: calResult.eventId }).where(eq(bookings.id, bookingId));
-			}
-			await db.insert(bookingHistory).values({
-				bookingId,
-				action: calResult.ok ? "calendar_event_created" : "calendar_event_failed",
-				source: "automatic",
-				changedBy: session.user.id,
-				changes: calResult.ok
-					? { calendarId: calId, eventId: calResult.eventId }
-					: { calendarId: calId, error: calResult.error },
-			});
-		}
-	}
 
-	// Sync calendar event whenever the booking is updated
-	if (updated.driverId && Object.keys(changes).length > 0) {
-		let eventId = updated.googleCalendarEventId;
-		if (!eventId) {
-			const historyRow = await db
-				.select({ changes: bookingHistory.changes })
-				.from(bookingHistory)
-				.where(and(eq(bookingHistory.bookingId, bookingId), eq(bookingHistory.action, "calendar_event_created")))
-				.orderBy(desc(bookingHistory.createdAt))
-				.limit(1);
-			const recovered = (historyRow[0]?.changes as Record<string, string> | null)?.eventId ?? null;
-			if (recovered) {
-				eventId = recovered;
-				await db.update(bookings).set({ googleCalendarEventId: recovered }).where(eq(bookings.id, bookingId));
-			}
-		}
-		if (eventId) {
-			const driverRows = await db
-				.select({ googleCalendarId: drivers.googleCalendarId })
-				.from(drivers)
-				.where(eq(drivers.id, updated.driverId))
-				.limit(1);
-			const calId = driverRows[0]?.googleCalendarId;
-			if (calId) {
-				await updateBookingCalendarEvent(calId, eventId, updated).catch(() => null);
-			}
-		}
+	// Sync both calendars: creates the main event once confirmed and the driver
+	// event once a driver is assigned; updates whichever events already exist.
+	if (Object.keys(changes).length > 0) {
+		await syncBookingCalendars(updated, {
+			changedBy: session.user.id,
+			source: "manual",
+		});
 	}
 
 	return NextResponse.json(updated);
@@ -432,56 +385,13 @@ export async function PATCH(request: Request, context: RouteContext) {
 			changedBy: session.user.id,
 			source: "manual",
 		});
-	} else if (newStatus === "confirmed" && current.driverId) {
-		const driverRows = await db
-			.select({ googleCalendarId: drivers.googleCalendarId })
-			.from(drivers)
-			.where(eq(drivers.id, current.driverId))
-			.limit(1);
-		const calId = driverRows[0]?.googleCalendarId;
-		if (calId) {
-			const calResult = await createBookingCalendarEvent(calId, updated)
-				.then((eventId) => ({ ok: true as const, eventId }))
-				.catch((err: Error) => ({ ok: false as const, error: err?.message ?? String(err) }));
-			if (calResult.ok && calResult.eventId) {
-				await db.update(bookings).set({ googleCalendarEventId: calResult.eventId }).where(eq(bookings.id, bookingId));
-			}
-			await db.insert(bookingHistory).values({
-				bookingId,
-				action: calResult.ok ? "calendar_event_created" : "calendar_event_failed",
-				source: "automatic",
-				changedBy: session.user.id,
-				changes: calResult.ok
-					? { calendarId: calId, eventId: calResult.eventId }
-					: { calendarId: calId, error: calResult.error },
-			});
-		}
-	} else if (updated.driverId) {
-		let eventId = updated.googleCalendarEventId;
-		if (!eventId) {
-			const historyRow = await db
-				.select({ changes: bookingHistory.changes })
-				.from(bookingHistory)
-				.where(and(eq(bookingHistory.bookingId, bookingId), eq(bookingHistory.action, "calendar_event_created")))
-				.orderBy(desc(bookingHistory.createdAt))
-				.limit(1);
-			const recovered = (historyRow[0]?.changes as Record<string, string> | null)?.eventId ?? null;
-			if (recovered) {
-				eventId = recovered;
-				await db.update(bookings).set({ googleCalendarEventId: recovered }).where(eq(bookings.id, bookingId));
-			}
-		}
-		if (eventId) {
-			const driverRows = await db
-				.select({ googleCalendarId: drivers.googleCalendarId })
-				.from(drivers)
-				.where(eq(drivers.id, updated.driverId))
-				.limit(1);
-			const calId = driverRows[0]?.googleCalendarId;
-			if (calId) {
-				await updateBookingCalendarEvent(calId, eventId, updated).catch(() => null);
-			}
-		}
+	} else {
+		// confirmed → creates the main event; assigned/completed → updates both;
+		// reverting to pending → updates whatever events already exist.
+		await syncBookingCalendars(updated, {
+			changedBy: session.user.id,
+			source: "manual",
+		});
 	}
 
 	return NextResponse.json(updated);

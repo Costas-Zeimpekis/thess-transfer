@@ -3,6 +3,10 @@ import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { bookingHistory, bookings, drivers, vehicles } from "@/lib/db/schema";
 
+// The company's main calendar. Every confirmed booking gets an event here,
+// independent of any driver assignment.
+const MAIN_CALENDAR_ID = "raptis79@gmail.com";
+
 function getCalendarClient() {
   const auth = new google.auth.GoogleAuth({
     credentials: {
@@ -133,6 +137,7 @@ export async function updateBookingCalendarEvent(
 async function resolveEventId(
   bookingId: number,
   stored: string | null,
+  action = "calendar_event_created",
 ): Promise<string | null> {
   if (stored) return stored;
   const rows = await db
@@ -141,12 +146,81 @@ async function resolveEventId(
     .where(
       and(
         eq(bookingHistory.bookingId, bookingId),
-        eq(bookingHistory.action, "calendar_event_created"),
+        eq(bookingHistory.action, action),
       ),
     )
     .orderBy(desc(bookingHistory.createdAt))
     .limit(1);
   return (rows[0]?.changes as Record<string, string> | null)?.eventId ?? null;
+}
+
+// Creates the main company calendar event for a booking, or updates it if one
+// already exists. Stores googleCalendarMainEventId on the booking and logs to
+// history on create. Only creates when `createIfMissing` is true (i.e. the
+// booking is confirmed or later); always updates an event that already exists.
+export async function syncMainCalendarEvent(
+  booking: BookingForCalendar & { googleCalendarMainEventId: string | null },
+  opts: { changedBy: number | null; source: "manual" | "automatic" },
+  createIfMissing: boolean,
+): Promise<void> {
+  const eventId = await resolveEventId(
+    booking.id,
+    booking.googleCalendarMainEventId,
+    "main_calendar_event_created",
+  );
+  if (eventId) {
+    await updateBookingCalendarEvent(MAIN_CALENDAR_ID, eventId, booking).catch(
+      () => null,
+    );
+    if (!booking.googleCalendarMainEventId) {
+      await db
+        .update(bookings)
+        .set({ googleCalendarMainEventId: eventId })
+        .where(eq(bookings.id, booking.id));
+    }
+    return;
+  }
+  if (!createIfMissing) return;
+
+  const calResult = await createBookingCalendarEvent(MAIN_CALENDAR_ID, booking)
+    .then((id) => ({ ok: true as const, eventId: id }))
+    .catch((err: Error) => ({ ok: false as const, error: err?.message ?? String(err) }));
+  if (calResult.ok && calResult.eventId) {
+    await db
+      .update(bookings)
+      .set({ googleCalendarMainEventId: calResult.eventId })
+      .where(eq(bookings.id, booking.id));
+  }
+  await db.insert(bookingHistory).values({
+    bookingId: booking.id,
+    action: calResult.ok
+      ? "main_calendar_event_created"
+      : "main_calendar_event_failed",
+    source: opts.source,
+    changedBy: opts.changedBy,
+    changes: calResult.ok
+      ? { calendarId: MAIN_CALENDAR_ID, eventId: calResult.eventId }
+      : { calendarId: MAIN_CALENDAR_ID, error: calResult.error },
+  });
+}
+
+// Syncs both calendars for a booking: the main company calendar (created once
+// the booking is confirmed, updated thereafter) and the driver's calendar
+// (created on assignment, updated thereafter).
+export async function syncBookingCalendars(
+  booking: BookingForCalendar & {
+    driverId: number | null;
+    googleCalendarEventId: string | null;
+    googleCalendarMainEventId: string | null;
+  },
+  opts: { changedBy: number | null; source: "manual" | "automatic" },
+): Promise<void> {
+  const active =
+    booking.status === "confirmed" ||
+    booking.status === "assigned" ||
+    booking.status === "completed";
+  await syncMainCalendarEvent(booking, opts, active);
+  await syncBookingCalendarEvent(booking, opts);
 }
 
 // Creates the driver's Google Calendar event for a booking, or updates it if one
@@ -202,10 +276,35 @@ export async function syncBookingCalendarEvent(
 
 const CANCELLED_PREFIX = "❌ ΑΚΥΡΩΘΗΚΕ — ";
 
-// Marks the linked Google Calendar event as cancelled by keeping it visible but
-// prepending a "cancelled" marker to its title and greying it out (Graphite).
+// Marks a single calendar event as cancelled by keeping it visible but prepending
+// a "cancelled" marker to its title and greying it out (Graphite). Google Calendar
+// has no strikethrough.
+async function cancelSingleEvent(
+  calId: string,
+  eventId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const calendar = getCalendarClient();
+  return calendar.events
+    .get({ calendarId: calId, eventId })
+    .then((ev) => {
+      const current = ev.data.summary ?? "";
+      const summary = current.startsWith(CANCELLED_PREFIX)
+        ? current
+        : `${CANCELLED_PREFIX}${current}`;
+      return calendar.events.patch({
+        calendarId: calId,
+        eventId,
+        requestBody: { summary, colorId: "8" }, // Graphite
+      });
+    })
+    .then(() => ({ ok: true as const }))
+    .catch((err: Error) => ({ ok: false as const, error: err?.message ?? String(err) }));
+}
+
+// Cancels only the driver's calendar event. Used when a driver is removed from a
+// booking that itself stays active (partner reassignment / unassignment).
 // No-op when the booking has no driver, driver calendar, or linked event.
-export async function markBookingCalendarEventCancelled(
+export async function markDriverCalendarEventCancelled(
   booking: {
     id: number;
     driverId: number | null;
@@ -224,23 +323,7 @@ export async function markBookingCalendarEventCancelled(
   const calId = driver?.googleCalendarId;
   if (!calId) return;
 
-  const calendar = getCalendarClient();
-  const res = await calendar.events
-    .get({ calendarId: calId, eventId })
-    .then((ev) => {
-      const current = ev.data.summary ?? "";
-      const summary = current.startsWith(CANCELLED_PREFIX)
-        ? current
-        : `${CANCELLED_PREFIX}${current}`;
-      return calendar.events.patch({
-        calendarId: calId,
-        eventId,
-        requestBody: { summary, colorId: "8" }, // Graphite
-      });
-    })
-    .then(() => ({ ok: true as const }))
-    .catch((err: Error) => ({ ok: false as const, error: err?.message ?? String(err) }));
-
+  const res = await cancelSingleEvent(calId, eventId);
   await db.insert(bookingHistory).values({
     bookingId: booking.id,
     action: res.ok ? "calendar_event_cancelled" : "calendar_event_cancel_failed",
@@ -250,4 +333,37 @@ export async function markBookingCalendarEventCancelled(
       ? { calendarId: calId, eventId }
       : { calendarId: calId, error: res.error },
   });
+}
+
+// Cancels both the main company calendar event and the driver's calendar event
+// when a whole booking is cancelled. No-op per calendar when no event exists.
+export async function markBookingCalendarEventCancelled(
+  booking: {
+    id: number;
+    driverId: number | null;
+    googleCalendarEventId: string | null;
+    googleCalendarMainEventId: string | null;
+  },
+  opts: { changedBy: number | null; source: "manual" | "automatic" },
+): Promise<void> {
+  const mainEventId = await resolveEventId(
+    booking.id,
+    booking.googleCalendarMainEventId,
+    "main_calendar_event_created",
+  );
+  if (mainEventId) {
+    const res = await cancelSingleEvent(MAIN_CALENDAR_ID, mainEventId);
+    await db.insert(bookingHistory).values({
+      bookingId: booking.id,
+      action: res.ok
+        ? "main_calendar_event_cancelled"
+        : "main_calendar_event_cancel_failed",
+      source: opts.source,
+      changedBy: opts.changedBy,
+      changes: res.ok
+        ? { calendarId: MAIN_CALENDAR_ID, eventId: mainEventId }
+        : { calendarId: MAIN_CALENDAR_ID, error: res.error },
+    });
+  }
+  await markDriverCalendarEventCancelled(booking, opts);
 }

@@ -4,7 +4,7 @@ import { db } from '@/lib/db'
 import { bookings, bookingHistory } from '@/lib/db/schema'
 import { validateBookingDates } from '@/lib/utils'
 import { eq } from 'drizzle-orm'
-import { markBookingCalendarEventCancelled, syncBookingCalendarEvent } from '@/lib/google-calendar'
+import { markDriverCalendarEventCancelled, syncBookingCalendars, syncMainCalendarEvent } from '@/lib/google-calendar'
 
 type RouteContext = { params: Promise<{ id: string }> }
 
@@ -103,16 +103,29 @@ export async function POST(request: Request, context: RouteContext) {
   })
 
   if (type === 'driver') {
-    await syncBookingCalendarEvent(result[0], {
+    // Assigning a driver — sync both the main and the driver calendars
+    await syncBookingCalendars(result[0], {
       changedBy: session.user.id,
       source: 'manual',
     })
-  } else if (existing[0].driverId && existing[0].googleCalendarEventId) {
-    // Driver removed (partner / unassign) — cancel the event on the previous driver's calendar
-    await markBookingCalendarEventCancelled(existing[0], {
-      changedBy: session.user.id,
-      source: 'manual',
-    })
+  } else {
+    // Partner / unassign — driver removed: cancel the previous driver's event,
+    // but keep and refresh the main company calendar event.
+    if (existing[0].driverId && existing[0].googleCalendarEventId) {
+      await markDriverCalendarEventCancelled(existing[0], {
+        changedBy: session.user.id,
+        source: 'manual',
+      })
+    }
+    const active =
+      result[0].status === 'confirmed' ||
+      result[0].status === 'assigned' ||
+      result[0].status === 'completed'
+    await syncMainCalendarEvent(
+      result[0],
+      { changedBy: session.user.id, source: 'manual' },
+      active,
+    )
   }
 
   return NextResponse.json(result[0])

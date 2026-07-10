@@ -1,0 +1,1 @@
+ALTER TABLE "bookings" ADD COLUMN "google_calendar_main_event_id" varchar(200);
