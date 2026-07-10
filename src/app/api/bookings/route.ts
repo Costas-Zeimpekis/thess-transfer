@@ -2,7 +2,7 @@ import { and, desc, eq, gte, ilike, lte, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { parseAthensDatetime } from "@/lib/utils";
+import { parseAthensDatetime, validateBookingDates } from "@/lib/utils";
 import {
   bookingHistory,
   bookings,
@@ -232,6 +232,15 @@ export async function POST(request: Request) {
       { error: "Λείπουν υποχρεωτικά πεδία παρόχου" },
       { status: 400 },
     );
+  }
+
+  const dateError = validateBookingDates({
+    arrivalDatetime: parseAthensDatetime(pickup_datetime),
+    startTime: start_time ? parseAthensDatetime(start_time) : null,
+    endTime: end_time ? parseAthensDatetime(end_time) : null,
+  });
+  if (dateError) {
+    return NextResponse.json({ error: dateError }, { status: 400 });
   }
 
   if (provider_id && provider_booking_ref) {

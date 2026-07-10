@@ -18,6 +18,12 @@ any non-completed ──► [intake API CANCEL or manual]   ──► cancelled
 - Intake API UPDATE on `completed` booking → rejected (returns 409)
 - Intake API UPDATE on `confirmed` booking where `pickup_datetime > NOW()` → reverts to `pending`, clears `driver_id`, `vehicle_id`, `partner_id`, `partner_assignment_price`, logs to history
 - Auto-completion runs via Cloudflare Cron Trigger every 30 minutes
+
+### Date validation
+- `end_time` (Ημερομηνία Λήξης) must be strictly after both `arrival_datetime` (Ημερομηνία Άφιξης) and `start_time` (Ημερομηνία Έναρξης)
+- A blank `start_time` is ignored; a blank `end_time` skips validation entirely
+- Enforced on every internal booking mutation: create (`POST /api/bookings`), update (`PUT /api/bookings/[id]`), forward status change to `confirmed`/`assigned`/`completed` (`PATCH /api/bookings/[id]`), and driver/partner assignment (`POST /api/bookings/[id]/assign`). Transitions to `pending`/`cancelled` are not blocked
+- Shared helper: `validateBookingDates()` in `src/lib/utils.ts`; also mirrored client-side in the booking form. Returns a Greek error message on failure (400)
 - Cancelling a booking (cancel button, internal PATCH, or intake PATCH) marks the linked Google Calendar event as cancelled by keeping it visible, prepending `❌ ΑΚΥΡΩΘΗΚΕ — ` to its title and greying it out (Graphite / colorId 8). Google Calendar has no strikethrough. No-op when the booking has no driver / driver calendar / linked event. Logged as `calendar_event_cancelled` (or `calendar_event_cancel_failed`) in history.
 
 ## Assignment Logic

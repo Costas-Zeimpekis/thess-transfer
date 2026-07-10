@@ -24,3 +24,22 @@ export function parseAthensDatetime(naive: string): Date {
   const offset = (athensHour3 - utcHour3 + 24) % 24 === 3 ? "+03:00" : "+02:00";
   return new Date(naive + offset);
 }
+
+// Validates that the booking end time is strictly after both the arrival datetime
+// and the start time. A blank start time is ignored. Returns a Greek error message,
+// or null when valid.
+export function validateBookingDates(dates: {
+  arrivalDatetime: Date | null;
+  startTime: Date | null;
+  endTime: Date | null;
+}): string | null {
+  const { arrivalDatetime, startTime, endTime } = dates;
+  if (!endTime) return null;
+  if (startTime && endTime <= startTime) {
+    return "Η ώρα λήξης πρέπει να είναι μεταγενέστερη της ώρας έναρξης";
+  }
+  if (arrivalDatetime && endTime <= arrivalDatetime) {
+    return "Η ώρα λήξης πρέπει να είναι μεταγενέστερη της ώρας άφιξης";
+  }
+  return null;
+}

@@ -195,6 +195,15 @@ export default function BookingForm({
 		if (!passengerCount || parseInt(passengerCount, 10) < 1)
 			errors.passengerCount = "Συμπληρώστε αριθμό επιβατών";
 
+		if (endTime) {
+			const end = new Date(endTime);
+			if (startTime && end <= new Date(startTime)) {
+				errors.endTime = "Η ώρα λήξης πρέπει να είναι μετά την ώρα έναρξης";
+			} else if (arrivalDatetime && end <= new Date(arrivalDatetime)) {
+				errors.endTime = "Η ώρα λήξης πρέπει να είναι μετά την ώρα άφιξης";
+			}
+		}
+
 		if (isEdit && (effectiveStatus === "confirmed" || effectiveStatus === "assigned")) {
 			if (!customerPhone.trim()) errors.customerPhone = "Συμπληρώστε τηλέφωνο";
 			if (!customerEmail.trim()) errors.customerEmail = "Συμπληρώστε email";

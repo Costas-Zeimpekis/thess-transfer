@@ -2,7 +2,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { parseAthensDatetime } from "@/lib/utils";
+import { parseAthensDatetime, validateBookingDates } from "@/lib/utils";
 import {
 	bookingHistory,
 	bookings,
@@ -156,6 +156,31 @@ export async function PUT(request: Request, context: RouteContext) {
 			},
 			{ status: 400 },
 		);
+	}
+
+	const effectiveArrival =
+		pickup_datetime !== undefined
+			? parseAthensDatetime(pickup_datetime)
+			: current.arrivalDatetime;
+	const effectiveStart =
+		start_time !== undefined
+			? start_time
+				? parseAthensDatetime(start_time)
+				: null
+			: current.startTime;
+	const effectiveEnd =
+		end_time !== undefined
+			? end_time
+				? parseAthensDatetime(end_time)
+				: null
+			: current.endTime;
+	const dateError = validateBookingDates({
+		arrivalDatetime: effectiveArrival,
+		startTime: effectiveStart,
+		endTime: effectiveEnd,
+	});
+	if (dateError) {
+		return NextResponse.json({ error: dateError }, { status: 400 });
 	}
 
 	const updateValues: Partial<typeof current> = {};
@@ -365,6 +390,17 @@ export async function PATCH(request: Request, context: RouteContext) {
 			{ error: "Μη επιτρεπτή μετάβαση κατάστασης" },
 			{ status: 400 },
 		);
+	}
+
+	if (newStatus === "confirmed" || newStatus === "assigned" || newStatus === "completed") {
+		const dateError = validateBookingDates({
+			arrivalDatetime: current.arrivalDatetime,
+			startTime: current.startTime,
+			endTime: current.endTime,
+		});
+		if (dateError) {
+			return NextResponse.json({ error: dateError }, { status: 400 });
+		}
 	}
 
 	const updateValues: Record<string, unknown> = {

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { bookings, bookingHistory } from '@/lib/db/schema'
+import { validateBookingDates } from '@/lib/utils'
 import { eq } from 'drizzle-orm'
 import { markBookingCalendarEventCancelled, syncBookingCalendarEvent } from '@/lib/google-calendar'
 
@@ -30,6 +31,17 @@ export async function POST(request: Request, context: RouteContext) {
 
   const body = await request.json()
   const { type } = body
+
+  if (type === 'driver' || type === 'partner') {
+    const dateError = validateBookingDates({
+      arrivalDatetime: existing[0].arrivalDatetime,
+      startTime: existing[0].startTime,
+      endTime: existing[0].endTime,
+    })
+    if (dateError) {
+      return NextResponse.json({ error: dateError }, { status: 400 })
+    }
+  }
 
   let updateValues: Record<string, unknown> = {}
   let action: string
