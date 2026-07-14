@@ -1,20 +1,20 @@
 import { desc } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import ical from "ical-generator";
-import { google } from "googleapis";
+import { auth as googleAuth, calendar as googleCalendar } from "@googleapis/calendar";
 import { requireAuth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { calendarBackups } from "@/lib/db/schema";
 
 function getCalendarClient() {
-  const auth = new google.auth.GoogleAuth({
+  const auth = new googleAuth.GoogleAuth({
     credentials: {
       client_email: process.env.GOOGLE_CALENDAR_CLIENT_EMAIL,
       private_key: process.env.GOOGLE_CALENDAR_PRIVATE_KEY?.replace(/\\n/g, "\n"),
     },
     scopes: ["https://www.googleapis.com/auth/calendar.readonly"],
   });
-  return google.calendar({ version: "v3", auth });
+  return googleCalendar({ version: "v3", auth });
 }
 
 export async function GET() {

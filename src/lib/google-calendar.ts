@@ -1,4 +1,4 @@
-import { google } from "googleapis";
+import { auth as googleAuth, calendar as googleCalendar } from "@googleapis/calendar";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { bookingHistory, bookings, drivers, vehicles } from "@/lib/db/schema";
@@ -8,14 +8,14 @@ import { bookingHistory, bookings, drivers, vehicles } from "@/lib/db/schema";
 const MAIN_CALENDAR_ID = "raptis79@gmail.com";
 
 function getCalendarClient() {
-  const auth = new google.auth.GoogleAuth({
+  const auth = new googleAuth.GoogleAuth({
     credentials: {
       client_email: process.env.GOOGLE_CALENDAR_CLIENT_EMAIL,
       private_key: process.env.GOOGLE_CALENDAR_PRIVATE_KEY?.replace(/\\n/g, "\n"),
     },
     scopes: ["https://www.googleapis.com/auth/calendar.events"],
   });
-  return google.calendar({ version: "v3", auth });
+  return googleCalendar({ version: "v3", auth });
 }
 
 type BookingForCalendar = {

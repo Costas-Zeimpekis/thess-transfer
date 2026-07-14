@@ -40,28 +40,40 @@ pnpm dev
 
 ---
 
-## Cloudflare Pages Deployment
+## Cloudflare Workers Deployment
 
-### GitHub Secrets required
+The app deploys to Cloudflare Workers via the OpenNext adapter (`@opennextjs/cloudflare`).
+Config: `wrangler.jsonc` (worker name `thess-transfers`, Kissmybutton account) + `open-next.config.ts`.
+Live URL: https://thess-transfers.kissmybutton-account.workers.dev
+
+### Manual deploy
+```bash
+pnpm run deploy        # opennextjs-cloudflare build + deploy (requires wrangler login)
+pnpm run preview       # build + run locally in workerd
+```
+
+### Worker secrets (runtime env vars)
+Set via `wrangler secret bulk` or the dashboard — all keys from `.env.local`:
+`DATABASE_URL, INTAKE_API_KEY, SESSION_SECRET, TURNSTILE_SECRET_KEY, NEXT_PUBLIC_TURNSTILE_SITE_KEY, AI_AGENT_SECRET, GOOGLE_CALENDAR_CLIENT_EMAIL, GOOGLE_CALENDAR_PRIVATE_KEY`
+
+### GitHub Secrets required (CI/CD)
 ```
 DATABASE_URL
 INTAKE_API_KEY
 SESSION_SECRET
 TURNSTILE_SECRET_KEY
 NEXT_PUBLIC_TURNSTILE_SITE_KEY
-CF_API_TOKEN       # Cloudflare API token with Pages:Edit permission
-CF_ACCOUNT_ID      # Cloudflare account ID
+CLOUDFLARE_API_TOKEN   # Cloudflare API token, "Edit Cloudflare Workers" template
 ```
 
 ### CI/CD
-Push to `main` → GitHub Actions runs migrations → builds → deploys to Cloudflare Pages.
+Push to `main` → GitHub Actions runs migrations → OpenNext build → `wrangler deploy`.
 Pipeline: `.github/workflows/deploy.yml`
 
 ### Cloudflare Cron Trigger (auto-complete bookings)
-Add to `wrangler.toml`:
-```toml
-[triggers]
-crons = ["*/30 * * * *"]
+Add to `wrangler.jsonc`:
+```jsonc
+"triggers": { "crons": ["*/30 * * * *"] }
 ```
 The cron handler marks `confirmed` bookings as `completed` when `pickup_datetime < NOW()`.
 

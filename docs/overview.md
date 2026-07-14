@@ -13,7 +13,7 @@ A web-based admin panel for a Thessaloniki passenger transfer company. It manage
 - Tailwind CSS + shadcn/ui
 - Neon PostgreSQL + Drizzle ORM
 - Custom session auth (HttpOnly cookies, SameSite=Strict, Cloudflare Turnstile)
-- Cloudflare Pages deployment
+- Cloudflare Workers deployment (OpenNext adapter)
 - GitHub Actions CI/CD (push to main → migrate → build → deploy)
 - Package manager: pnpm
 
