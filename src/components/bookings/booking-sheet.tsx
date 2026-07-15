@@ -35,7 +35,7 @@ export type BookingFormData = {
 	endTime: string | null;
 	pickupLocation: string;
 	dropoffLocation: string;
-	passengerCount: number;
+	passengerCount: number | null;
 	vehicleType: string;
 	babySeat: number | null;
 	boosterSeat: number | null;
@@ -123,7 +123,9 @@ export default function BookingSheet({
 			setFlightNumber(booking.flightNumber ?? "");
 			setPickupLocation(booking.pickupLocation);
 			setDropoffLocation(booking.dropoffLocation);
-			setPassengerCount(String(booking.passengerCount));
+			setPassengerCount(
+				booking.passengerCount != null ? String(booking.passengerCount) : "",
+			);
 			setVehicleType(booking.vehicleType);
 			setBabySeat(booking.babySeat ?? 0);
 			setBoosterSeat(booking.boosterSeat ?? 0);

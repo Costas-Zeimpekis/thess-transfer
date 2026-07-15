@@ -127,6 +127,13 @@
       "when": 1783672754474,
       "tag": "0017_concerned_blade",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1784108366617,
+      "tag": "0018_wise_morlun",
+      "breakpoints": true
     }
   ]
 }

@@ -53,7 +53,7 @@ export type BookingRow = {
 	endTime: string | null;
 	pickupLocation: string;
 	dropoffLocation: string;
-	passengerCount: number;
+	passengerCount: number | null;
 	vehicleType: "car" | "van" | "bus";
 	babySeat: boolean | null;
 	boosterSeat: boolean | null;

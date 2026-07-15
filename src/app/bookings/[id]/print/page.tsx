@@ -180,7 +180,7 @@ export default async function BookingPrintPage({ params }: PageProps) {
 				{/* Passengers & Vehicle */}
 				<Section title="Επιβάτες & Όχημα">
 					<div className="grid grid-cols-3 gap-x-8 gap-y-3">
-						<Field label="Επιβάτες" value={String(b.passengerCount)} />
+						<Field label="Επιβάτες" value={b.passengerCount != null ? String(b.passengerCount) : "—"} />
 						<Field label="Baby Seat" value={b.babySeat ? String(b.babySeat) : "0"} />
 						<Field label="Booster Seat" value={b.boosterSeat ? String(b.boosterSeat) : "0"} />
 					</div>

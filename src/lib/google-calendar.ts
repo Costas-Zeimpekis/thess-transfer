@@ -29,7 +29,7 @@ type BookingForCalendar = {
   pickupLocation: string;
   dropoffLocation: string;
   flightNumber: string | null;
-  passengerCount: number;
+  passengerCount: number | null;
   vehicleType: string;
   babySeat: number | null;
   boosterSeat: number | null;
@@ -75,7 +75,7 @@ function buildEventBody(booking: BookingForCalendar, vehicleLabel: string | null
     `Προορισμός: ${booking.dropoffLocation}`,
     booking.flightNumber ? `Πτήση: ${booking.flightNumber}` : null,
     ``,
-    `Επιβάτες: ${booking.passengerCount}`,
+    `Επιβάτες: ${booking.passengerCount ?? "—"}`,
     `Όχημα: ${booking.vehicleType}`,
     vehicleLabel ? `Αυτοκίνητο: ${vehicleLabel}` : null,
     booking.babySeat ? `Baby Seat: ${booking.babySeat}` : null,

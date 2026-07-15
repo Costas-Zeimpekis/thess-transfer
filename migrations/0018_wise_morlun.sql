@@ -1,0 +1,1 @@
+ALTER TABLE "bookings" ALTER COLUMN "passenger_count" DROP NOT NULL;

@@ -173,7 +173,7 @@ export const bookings = pgTable(
     endTime: timestamp("end_time", { withTimezone: true }),
     pickupLocation: text("pickup_location").notNull(),
     dropoffLocation: text("dropoff_location").notNull(),
-    passengerCount: integer("passenger_count").notNull().default(1),
+    passengerCount: integer("passenger_count").default(1),
     vehicleType: vehicleTypeEnum("vehicle_type").notNull(),
     babySeat: integer("baby_seat").default(0),
     boosterSeat: integer("booster_seat").default(0),

@@ -136,6 +136,7 @@ POST /api/agent/booking
 Body: same fields as Intake API POST. `provider_email` or `provider_id` are optional.  
 Auto-generates `provider_booking_ref` if omitted (`AGENT-<timestamp>`).  
 Created with `approved: true`, so admins see them immediately (no developer approval step).  
+`passenger_count`: defaults to `1` if the field is omitted entirely; stored as `null` if explicitly sent as `null`.  
 Response: `201 { id, status: "pending" }`
 
 ### Update booking
@@ -148,6 +149,7 @@ Body: identify booking with `provider_email` or `provider_id` + `provider_bookin
 Optional: `updated_provider_booking_ref` to change the booking ref itself.  
 Confirmed bookings with future pickup revert to `pending` and clear assignment (matches intake behaviour).  
 Completed or cancelled bookings return `409`.  
+`passenger_count`: if the field is present in the body and explicitly `null`, stored as `null` (no default applied).  
 Response: `200 { id, status }`
 
 ### Change status

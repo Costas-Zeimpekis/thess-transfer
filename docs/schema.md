@@ -77,7 +77,7 @@ start_time (timestamptz, nullable)  -- rental start date & time (Ημερομη�
 end_time (timestamptz, nullable)    -- rental end date & time (Ημερομηνία Λήξης); drives Google Calendar event end
 pickup_location
 dropoff_location
-passenger_count
+passenger_count (integer, nullable, default 1) -- null if not provided by caller
 vehicle_type (enum)          -- requested type
 baby_seat (bool)
 booster_seat (bool)

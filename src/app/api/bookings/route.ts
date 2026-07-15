@@ -280,7 +280,7 @@ export async function POST(request: Request) {
       endTime: end_time ? parseAthensDatetime(end_time) : null,
       pickupLocation: pickup_location,
       dropoffLocation: dropoff_location,
-      passengerCount: passenger_count ?? 1,
+      passengerCount: "passenger_count" in body ? passenger_count : 1,
       vehicleType: vehicle_type,
       babySeat: baby_seat ?? 0,
       boosterSeat: booster_seat ?? 0,

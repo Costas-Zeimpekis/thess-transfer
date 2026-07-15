@@ -172,7 +172,7 @@ export default async function BookingContractPrintPage({ params }: PageProps) {
 						<ContractField
 							labelGr="ΑΤΟΜΑ"
 							labelEn="PAX"
-							value={String(b.passengerCount)}
+							value={b.passengerCount != null ? String(b.passengerCount) : "—"}
 							note="Η σύμβαση μίσθωσης ισχύει για τους παρακάτω επιβάτες / Rental agreement is valid for the following passengers"
 						/>
 						<ContractField labelGr="ΣΗΜΕΙΟ ΕΝΑΡΞΗΣ" labelEn="START LOCATION" value="ΕΔΡΑ ΜΑΣ (ΜΟΝΑΣΤΗΡΙΟΥ 28)" />

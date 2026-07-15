@@ -144,7 +144,7 @@ export async function POST(request: Request) {
         flightNumber: flight_number ?? null,
         pickupLocation: pickup_location,
         dropoffLocation: dropoff_location,
-        passengerCount: passenger_count ?? 1,
+        passengerCount: "passenger_count" in body ? passenger_count : 1,
         vehicleType: vehicle_type,
         babySeat: baby_seat ?? 0,
         boosterSeat: booster_seat ?? 0,
@@ -370,7 +370,7 @@ export async function PUT(request: Request) {
       ? dropoff_location
       : current.dropoffLocation,
     passengerCount: hasField("passenger_count")
-      ? (passenger_count ?? 1)
+      ? passenger_count
       : current.passengerCount,
     vehicleType: hasField("vehicle_type") ? vehicle_type : current.vehicleType,
     babySeat: hasField("baby_seat") ? (baby_seat ?? 0) : current.babySeat,
