@@ -7,6 +7,7 @@ All 9 providers pre-seeded via `pnpm db:seed`.
 | Airports Taxi Transfers | `airports-taxi-transfers` | bookings@airportstaxitransfers.com | all |
 | Foxtransfer EU | `foxtransfer-eu` | info@foxtransfer.eu | all |
 | Cheap-Taxis | `cheap-taxis` | bookings@cheap-taxis.com | all |
+| Cheap-Taxis | `cheap-taxis` | bookings@city-airport-taxis.com | all |
 | Talixo | `talixo` | info@talixo.de | booking |
 | Talixo | `talixo` | do-not-reply@talixo.de | modification/cancellation |
 | ZIPTRANSFERS | `ziptransfers` | reservations@ziptransfers.com | all |

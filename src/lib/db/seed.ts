@@ -33,6 +33,7 @@ async function seed() {
       slug: "cheap-taxis",
       emails: [
         { email: "bookings@cheap-taxis.com", operation: "all" as const },
+        { email: "bookings@city-airport-taxis.com", operation: "all" as const },
       ],
     },
     {
