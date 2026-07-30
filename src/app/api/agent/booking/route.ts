@@ -10,6 +10,12 @@ import {
 } from "@/lib/db/schema";
 import { parseAthensDatetime } from "@/lib/utils";
 import { markBookingCalendarEventCancelled } from "@/lib/google-calendar";
+import {
+  type EncodingIssues,
+  detectEncodingIssues,
+  hasEncodingIssues,
+  readEncodingIssues,
+} from "@/lib/encoding";
 
 async function log(
   level: string,
@@ -21,6 +27,31 @@ async function log(
 }
 async function logError(source: string, message: string, payload: unknown) {
   await log("error", source, message, payload);
+}
+
+async function readBody(request: Request, source: string) {
+  try {
+    return await request.json();
+  } catch (err) {
+    await logError(source, "Malformed JSON body — request rejected", {
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return null;
+  }
+}
+
+async function logEncodingIssues(
+  source: string,
+  bookingId: number,
+  ref: string,
+  issues: EncodingIssues,
+) {
+  await log(
+    "warn",
+    source,
+    `Booking #${bookingId} (ref: ${ref}) — κατεστραμμένη κωδικοποίηση σε: ${Object.keys(issues).join(", ")}. Τα πεδία δεν αποθηκεύτηκαν και πρέπει να συμπληρωθούν χειροκίνητα.`,
+    { bookingId, ref, issues },
+  );
 }
 
 async function resolveProviderId(
@@ -49,7 +80,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await request.json();
+  const body = await readBody(request, "POST /api/agent/booking");
+  if (body === null) {
+    return NextResponse.json({ error: "Malformed JSON body" }, { status: 400 });
+  }
+
   const {
     provider_email,
     provider_id,
@@ -78,11 +113,22 @@ export async function POST(request: Request) {
     !vehicle_type ||
     !customer_name
   ) {
+    await logError(
+      "POST /api/agent/booking",
+      "Missing required fields — request rejected",
+      body,
+    );
     return NextResponse.json(
       { error: "Missing required fields" },
       { status: 400 },
     );
   }
+
+  // Fields whose text arrived corrupted are not stored — the booking is still
+  // created, and the status gate holds it until an operator fills them in.
+  const encodingIssues = detectEncodingIssues(body);
+  const dropIfCorrupt = <T>(field: keyof typeof encodingIssues, value: T) =>
+    field in encodingIssues ? null : value;
 
   const resolvedProviderId = await resolveProviderId(
     provider_email,
@@ -98,7 +144,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Provider not found" }, { status: 404 });
   }
 
-  const resolvedRef = provider_booking_ref ?? `AGENT-${Date.now()}`;
+  const resolvedRef =
+    dropIfCorrupt("provider_booking_ref", provider_booking_ref) ??
+    `AGENT-${Date.now()}`;
 
   const duplicateWhere = resolvedProviderId
     ? and(
@@ -141,21 +189,25 @@ export async function POST(request: Request) {
         source: "automatic",
         status: "pending",
         arrivalDatetime: parseAthensDatetime(pickup_datetime),
-        flightNumber: flight_number ?? null,
-        pickupLocation: pickup_location,
-        dropoffLocation: dropoff_location,
+        flightNumber: dropIfCorrupt("flight_number", flight_number) ?? null,
+        pickupLocation: dropIfCorrupt("pickup_location", pickup_location) ?? "",
+        dropoffLocation:
+          dropIfCorrupt("dropoff_location", dropoff_location) ?? "",
         passengerCount: "passenger_count" in body ? passenger_count : 1,
         vehicleType: vehicle_type,
         babySeat: baby_seat ?? 0,
         boosterSeat: booster_seat ?? 0,
-        customerName: customer_name,
-        customerPhone: customer_phone ?? null,
-        customerEmail: customer_email ?? null,
+        customerName: dropIfCorrupt("customer_name", customer_name) ?? "",
+        customerPhone: dropIfCorrupt("customer_phone", customer_phone) ?? null,
+        customerEmail: dropIfCorrupt("customer_email", customer_email) ?? null,
         paymentMethod: payment_method ?? null,
-        notes: notes ?? null,
+        notes: dropIfCorrupt("notes", notes) ?? null,
         realPrice: real_price != null ? String(real_price) : null,
         isReturnTrip: is_return_trip ?? false,
         approved: true, // API bookings are auto-approved (visible to admin)
+        customFields: hasEncodingIssues(encodingIssues)
+          ? { encodingIssues }
+          : {},
       })
       .returning();
     booking = result[0];
@@ -180,7 +232,15 @@ export async function POST(request: Request) {
         { status: 409 },
       );
     }
-    throw err;
+    await logError(
+      "POST /api/agent/booking",
+      `Database error while creating booking (ref: ${resolvedRef}): ${err instanceof Error ? err.message : String(err)}`,
+      body,
+    );
+    return NextResponse.json(
+      { error: "Could not create booking" },
+      { status: 500 },
+    );
   }
 
   await db.insert(bookingHistory).values({
@@ -198,6 +258,15 @@ export async function POST(request: Request) {
     { bookingId: booking.id, ref: booking.providerBookingRef, body },
   );
 
+  if (hasEncodingIssues(encodingIssues)) {
+    await logEncodingIssues(
+      "POST /api/agent/booking",
+      booking.id,
+      booking.providerBookingRef ?? resolvedRef,
+      encodingIssues,
+    );
+  }
+
   return NextResponse.json(booking, { status: 201 });
 }
 
@@ -213,7 +282,11 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await request.json();
+  const body = await readBody(request, "PUT /api/agent/booking");
+  if (body === null) {
+    return NextResponse.json({ error: "Malformed JSON body" }, { status: 400 });
+  }
+
   const {
     provider_email,
     provider_id,
@@ -286,8 +359,12 @@ export async function PUT(request: Request) {
   const hasField = (key: string) =>
     Object.prototype.hasOwnProperty.call(body as Record<string, unknown>, key);
 
+  const encodingIssues = detectEncodingIssues(body);
+
   const nextProviderBookingRef =
-    updated_provider_booking_ref ?? current.providerBookingRef;
+    ("updated_provider_booking_ref" in encodingIssues
+      ? null
+      : updated_provider_booking_ref) ?? current.providerBookingRef;
 
   if (nextProviderBookingRef !== current.providerBookingRef) {
     const duplicateRef = await db
@@ -354,19 +431,24 @@ export async function PUT(request: Request) {
     );
   }
 
+  // A corrupted value never overwrites what is already stored — the existing
+  // value is kept and the field is flagged for manual review instead.
+  const updates = (field: keyof typeof encodingIssues) =>
+    hasField(field) && !(field in encodingIssues);
+
   const newValues = {
     providerId: resolvedProviderId,
     providerBookingRef: nextProviderBookingRef,
     arrivalDatetime: hasField("pickup_datetime")
       ? parseAthensDatetime(pickup_datetime)
       : current.arrivalDatetime,
-    flightNumber: hasField("flight_number")
+    flightNumber: updates("flight_number")
       ? (flight_number ?? null)
       : current.flightNumber,
-    pickupLocation: hasField("pickup_location")
+    pickupLocation: updates("pickup_location")
       ? pickup_location
       : current.pickupLocation,
-    dropoffLocation: hasField("dropoff_location")
+    dropoffLocation: updates("dropoff_location")
       ? dropoff_location
       : current.dropoffLocation,
     passengerCount: hasField("passenger_count")
@@ -377,19 +459,19 @@ export async function PUT(request: Request) {
     boosterSeat: hasField("booster_seat")
       ? (booster_seat ?? 0)
       : current.boosterSeat,
-    customerName: hasField("customer_name")
+    customerName: updates("customer_name")
       ? customer_name
       : current.customerName,
-    customerPhone: hasField("customer_phone")
+    customerPhone: updates("customer_phone")
       ? (customer_phone ?? null)
       : current.customerPhone,
-    customerEmail: hasField("customer_email")
+    customerEmail: updates("customer_email")
       ? (customer_email ?? null)
       : current.customerEmail,
     paymentMethod: hasField("payment_method")
       ? (payment_method ?? null)
       : current.paymentMethod,
-    notes: hasField("notes") ? (notes ?? null) : current.notes,
+    notes: updates("notes") ? (notes ?? null) : current.notes,
     realPrice: hasField("real_price")
       ? real_price != null
         ? String(real_price)
@@ -433,6 +515,20 @@ export async function PUT(request: Request) {
 
   const updatePayload: Record<string, unknown> = { ...newValues };
 
+  if (hasEncodingIssues(encodingIssues)) {
+    const existingCustomFields =
+      typeof current.customFields === "object" && current.customFields !== null
+        ? (current.customFields as Record<string, unknown>)
+        : {};
+    updatePayload.customFields = {
+      ...existingCustomFields,
+      encodingIssues: {
+        ...readEncodingIssues(current.customFields),
+        ...encodingIssues,
+      },
+    };
+  }
+
   // Revert confirmed to pending if pickup is in the future and something changed
   if (
     current.status === "confirmed" &&
@@ -468,6 +564,15 @@ export async function PUT(request: Request) {
     { bookingId: current.id, changes, body },
   );
 
+  if (hasEncodingIssues(encodingIssues)) {
+    await logEncodingIssues(
+      "PUT /api/agent/booking",
+      current.id,
+      nextProviderBookingRef ?? provider_booking_ref,
+      encodingIssues,
+    );
+  }
+
   return NextResponse.json(result[0]);
 }
 
@@ -483,7 +588,11 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await request.json();
+  const body = await readBody(request, "PATCH /api/agent/booking");
+  if (body === null) {
+    return NextResponse.json({ error: "Malformed JSON body" }, { status: 400 });
+  }
+
   const {
     provider_email,
     provider_id,

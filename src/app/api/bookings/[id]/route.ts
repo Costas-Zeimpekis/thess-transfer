@@ -2,7 +2,12 @@ import { desc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { parseAthensDatetime, validateBookingDates } from "@/lib/utils";
+import {
+	parseAthensDatetime,
+	validateBookingDates,
+	validateRequiredBookingFields,
+} from "@/lib/utils";
+import { readEncodingIssues } from "@/lib/encoding";
 import {
 	bookingHistory,
 	bookings,
@@ -267,7 +272,53 @@ export async function PUT(request: Request, context: RouteContext) {
 			(resolvedDriverId != null && resolvedVehicleId != null) ||
 			resolvedPartnerId != null;
 		if (hasAssignment && current.status === "pending") {
+			const missingError = validateRequiredBookingFields({
+				pickupLocation:
+					pickup_location !== undefined
+						? pickup_location
+						: current.pickupLocation,
+				dropoffLocation:
+					dropoff_location !== undefined
+						? dropoff_location
+						: current.dropoffLocation,
+				customerName:
+					customer_name !== undefined ? customer_name : current.customerName,
+			});
+			if (missingError) {
+				return NextResponse.json({ error: missingError }, { status: 400 });
+			}
 			trackChange("status", "confirmed");
+		}
+	}
+
+	// An operator filling in a field that intake dropped clears its flag.
+	const storedIssues = readEncodingIssues(current.customFields);
+	if (Object.keys(storedIssues).length > 0) {
+		const resolvedFields: Record<string, unknown> = {
+			provider_booking_ref,
+			pickup_location,
+			dropoff_location,
+			customer_name,
+			customer_phone,
+			customer_email,
+			flight_number,
+			notes,
+		};
+		const remaining = Object.fromEntries(
+			Object.entries(storedIssues).filter(([field]) => {
+				const value = resolvedFields[field];
+				return !(typeof value === "string" && value.trim() !== "");
+			}),
+		);
+		if (Object.keys(remaining).length !== Object.keys(storedIssues).length) {
+			const existingCustomFields =
+				typeof current.customFields === "object" && current.customFields !== null
+					? (current.customFields as Record<string, unknown>)
+					: {};
+			(updateValues as Record<string, unknown>).customFields = {
+				...existingCustomFields,
+				encodingIssues: remaining,
+			};
 		}
 	}
 
@@ -346,6 +397,11 @@ export async function PATCH(request: Request, context: RouteContext) {
 	}
 
 	if (newStatus === "confirmed" || newStatus === "assigned" || newStatus === "completed") {
+		const missingError = validateRequiredBookingFields(current);
+		if (missingError) {
+			return NextResponse.json({ error: missingError }, { status: 400 });
+		}
+
 		const dateError = validateBookingDates({
 			arrivalDatetime: current.arrivalDatetime,
 			startTime: current.startTime,

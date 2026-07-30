@@ -20,6 +20,7 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { ENCODING_ISSUE_LABELS } from "@/lib/encoding";
 import { type BookingFormData } from "./booking-sheet";
 
 type Provider = { id: number; name: string };
@@ -227,6 +228,8 @@ export default function BookingForm({
 		setFieldErrors(errors);
 		return Object.keys(errors).length === 0;
 	}
+
+	const encodingIssueEntries = Object.entries(booking?.encodingIssues ?? {});
 
 	const declaredPriceLocked = isEdit && booking?.status === "completed";
 	const isAssignmentLocked =
@@ -473,6 +476,36 @@ export default function BookingForm({
 						)}
 					</div>
 				</div>
+				{encodingIssueEntries.length > 0 && (
+					<div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm">
+						<p className="font-semibold text-amber-900">
+							Πεδία με κατεστραμμένη κωδικοποίηση
+						</p>
+						<p className="mt-1 text-amber-800">
+							Ο πάροχος έστειλε τα παρακάτω πεδία με λάθος κωδικοποίηση, οπότε δεν
+							αποθηκεύτηκαν. Συμπληρώστε τα χειροκίνητα — η κράτηση δεν μπορεί να
+							αλλάξει κατάσταση όσο λείπουν.
+						</p>
+						<ul className="mt-3 space-y-2">
+							{encodingIssueEntries.map(([field, issue]) => (
+								<li key={field}>
+									<span className="font-medium text-amber-900">
+										{ENCODING_ISSUE_LABELS[field] ?? field}
+									</span>
+									<span className="block text-xs text-amber-700">
+										Ελήφθη: <code className="break-all">{issue.received}</code>
+									</span>
+									{issue.stripped && (
+										<span className="block text-xs text-amber-700">
+											Χωρίς τους ειδικούς χαρακτήρες:{" "}
+											<code className="break-all">{issue.stripped}</code>
+										</span>
+									)}
+								</li>
+							))}
+						</ul>
+					</div>
+				)}
 				<div className="flex flex-row gap-6 w-full items-stretch">
 					<div className="flex-1 min-w-0 h-full">
 						<form

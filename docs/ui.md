@@ -75,6 +75,10 @@ Form with all booking fields. Source = `manual`. Status starts as `pending`.
 ### `/bookings/[id]` — Booking Detail
 
 **Sections:**
+0. **Πεδία με κατεστραμμένη κωδικοποίηση** — amber banner, only when
+   `custom_fields.encodingIssues` is non-empty. Lists each affected field with the raw value
+   received and the same value stripped of control characters, so the operator can retype it.
+   The booking cannot change status while these fields are blank
 1. **Στοιχεία Κράτησης** — all booking fields (editable if not completed)
 2. **Ανάθεση** — assign to driver+vehicle OR partner (radio toggle)
    - Driver+Vehicle: driver select, vehicle select → confirms booking

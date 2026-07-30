@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { bookings, bookingHistory } from '@/lib/db/schema'
-import { validateBookingDates } from '@/lib/utils'
+import { validateBookingDates, validateRequiredBookingFields } from '@/lib/utils'
 import { eq } from 'drizzle-orm'
 import { markDriverCalendarEventCancelled, syncBookingCalendars, syncMainCalendarEvent } from '@/lib/google-calendar'
 
@@ -33,6 +33,11 @@ export async function POST(request: Request, context: RouteContext) {
   const { type } = body
 
   if (type === 'driver' || type === 'partner') {
+    const missingError = validateRequiredBookingFields(existing[0])
+    if (missingError) {
+      return NextResponse.json({ error: missingError }, { status: 400 })
+    }
+
     const dateError = validateBookingDates({
       arrivalDatetime: existing[0].arrivalDatetime,
       startTime: existing[0].startTime,

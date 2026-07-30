@@ -28,6 +28,24 @@ export function parseAthensDatetime(naive: string): Date {
 // Validates that the booking end time is strictly after both the arrival datetime
 // and the start time. A blank start time is ignored. Returns a Greek error message,
 // or null when valid.
+// Fields that must be present before a booking may leave "pending". Intake drops
+// values that arrived with a corrupted encoding, so these can be blank on an
+// otherwise valid automatic booking.
+export function validateRequiredBookingFields(booking: {
+  pickupLocation: string | null;
+  dropoffLocation: string | null;
+  customerName: string | null;
+}): string | null {
+  const missing = [
+    !booking.pickupLocation?.trim() && "Τόπος Παραλαβής",
+    !booking.dropoffLocation?.trim() && "Τόπος Αποστολής",
+    !booking.customerName?.trim() && "Ονοματεπώνυμο",
+  ].filter(Boolean);
+
+  if (missing.length === 0) return null;
+  return `Συμπληρώστε τα πεδία που λείπουν πριν την αλλαγή κατάστασης: ${missing.join(", ")}`;
+}
+
 export function validateBookingDates(dates: {
   arrivalDatetime: Date | null;
   startTime: Date | null;

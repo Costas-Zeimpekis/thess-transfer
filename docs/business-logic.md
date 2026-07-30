@@ -19,6 +19,34 @@ any non-completed ──► [intake API CANCEL or manual]   ──► cancelled
 - Intake API UPDATE on `confirmed` booking where `pickup_datetime > NOW()` → reverts to `pending`, clears `driver_id`, `vehicle_id`, `partner_id`, `partner_assignment_price`, logs to history
 - Auto-completion runs via Cloudflare Cron Trigger every 30 minutes
 
+### Encoding failures (intake / agent API)
+Upstream email parsers can deliver text with control characters (a NUL byte cannot be stored in a
+PostgreSQL `text` column at all — SQLSTATE `22021`). Rather than losing the whole booking:
+
+- On **create**: fields containing control characters are **not stored** — `NOT NULL` columns get
+  `""`, nullable ones `null`. Everything else on the booking is saved normally and the booking is
+  created as usual (`pending`, `approved: true`, visible to admins)
+- On **update**: a corrupted value never overwrites what is already stored — the existing value is
+  kept and the field is flagged instead
+- The raw value received is preserved in `custom_fields.encodingIssues` so an operator can
+  reconstruct the original from the booking detail page
+- A `warn` entry is written to `system_logs`, surfacing in Ειδοποιήσεις
+- Checked fields: `provider_booking_ref`, `updated_provider_booking_ref`, `pickup_location`,
+  `dropoff_location`, `customer_name`, `customer_phone`, `customer_email`, `flight_number`, `notes`.
+  Tabs and newlines are allowed (legitimate in free text)
+- Helpers live in `src/lib/encoding.ts`
+
+### Required fields before a status change
+`pickup_location`, `dropoff_location` and `customer_name` must be non-blank before a booking may
+move to `confirmed`, `assigned` or `completed`. This is what holds a booking with dropped fields
+until someone fills them in.
+
+- Shared helper: `validateRequiredBookingFields()` in `src/lib/utils.ts`, returns a Greek error (400)
+- Enforced on every path that can advance status: `PATCH /api/bookings/[id]`, the auto-transition to
+  `confirmed` inside `PUT /api/bookings/[id]`, and `POST /api/bookings/[id]/assign`
+- Mirrored client-side by the existing booking form validation
+- Transitions to `pending`/`cancelled` are not blocked
+
 ### Date validation
 - `end_time` (Ημερομηνία Λήξης) must be strictly after both `arrival_datetime` (Ημερομηνία Άφιξης) and `start_time` (Ημερομηνία Έναρξης)
 - A blank `start_time` is ignored; a blank `end_time` skips validation entirely

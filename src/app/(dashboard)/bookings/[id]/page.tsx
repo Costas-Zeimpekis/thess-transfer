@@ -2,6 +2,7 @@ import { asc, desc, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import BookingForm from "@/components/bookings/booking-form";
 import { db } from "@/lib/db";
+import { readEncodingIssues } from "@/lib/encoding";
 import {
 	bookingHistory,
 	bookings,
@@ -47,6 +48,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
 			vehicleId: bookings.vehicleId,
 			partnerId: bookings.partnerId,
 			partnerAssignmentPrice: bookings.partnerAssignmentPrice,
+			customFields: bookings.customFields,
 			createdAt: bookings.createdAt,
 		})
 		.from(bookings)
@@ -120,6 +122,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
 					vehicleId: booking.vehicleId,
 					partnerId: booking.partnerId,
 					partnerAssignmentPrice: booking.partnerAssignmentPrice,
+					encodingIssues: readEncodingIssues(booking.customFields),
 					createdAt: booking.createdAt?.toISOString() ?? null,
 				}}
 				providers={allProviders}

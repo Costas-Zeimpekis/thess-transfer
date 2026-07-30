@@ -114,6 +114,13 @@ created_at, updated_at
 UNIQUE(provider_booking_ref, provider_id)
 ```
 
+**`custom_fields.encodingIssues`** — set by the intake/agent API when a field arrives with a
+corrupted encoding. Shape: `{ <intake_field_name>: { received, stripped } }` where `received`
+is the escaped raw value and `stripped` is that value without the control characters. The field
+itself is not stored (blank for `NOT NULL` columns, `null` otherwise). Entries are removed as
+soon as an operator fills the field in via `PUT /api/bookings/[id]`. See
+[business-logic.md](business-logic.md) → Encoding failures.
+
 ### `booking_history`
 Audit log for every state change.
 ```

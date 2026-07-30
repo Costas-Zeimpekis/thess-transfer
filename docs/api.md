@@ -137,7 +137,15 @@ Body: same fields as Intake API POST. `provider_email` or `provider_id` are opti
 Auto-generates `provider_booking_ref` if omitted (`AGENT-<timestamp>`).  
 Created with `approved: true`, so admins see them immediately (no developer approval step).  
 `passenger_count`: defaults to `1` if the field is omitted entirely; stored as `null` if explicitly sent as `null`.  
+Text fields containing control characters are not stored — the booking is still created and the field is flagged in `custom_fields.encodingIssues` (see [business-logic.md](business-logic.md) → Encoding failures).  
 Response: `201 { id, status: "pending" }`
+
+**Error responses (all logged to `system_logs`):**
+- `400 { error: "Malformed JSON body" }` — body is not valid JSON
+- `400 { error: "Missing required fields" }`
+- `404 { error: "Provider not found" }`
+- `409 { error: "Booking ref \"…\" already exists for this provider" }`
+- `500 { error: "Could not create booking" }` — unexpected database error
 
 ### Update booking
 
@@ -150,6 +158,7 @@ Optional: `updated_provider_booking_ref` to change the booking ref itself.
 Confirmed bookings with future pickup revert to `pending` and clear assignment (matches intake behaviour).  
 Completed or cancelled bookings return `409`.  
 `passenger_count`: if the field is present in the body and explicitly `null`, stored as `null` (no default applied).  
+A field arriving with a corrupted encoding does not overwrite the stored value — the existing value is kept and the field is flagged in `custom_fields.encodingIssues`.  
 Response: `200 { id, status }`
 
 ### Change status

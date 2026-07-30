@@ -20,6 +20,7 @@ import {
 	SheetTitle,
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
+import type { EncodingIssues } from "@/lib/encoding";
 
 type Provider = { id: number; name: string };
 
@@ -51,6 +52,7 @@ export type BookingFormData = {
 	partnerId?: number | null;
 	partnerAssignmentPrice?: string | null;
 	assignedAt?: string | null;
+	encodingIssues?: EncodingIssues;
 	createdAt?: string | null;
 };
 
